@@ -8,22 +8,26 @@ window.makeEngine = function (D, onChange) {
 
   // ---------- calificar texto ----------
   const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-  const STOP = new Set('el la los las un una unos unas de del al a y o en con por para que tu te mi mis su sus se le lo es ver hacer tomar ir dar poner algo muy mas tus'.split(' '));
+  const STOP = new Set('el la los las un una unos unas de del al a y o en con por para que tu te mi mis su sus se le lo es son fue fueron era eran quien quienes cual cuales donde cuando ver hacer tomar ir dar poner algo muy mas tus'.split(' '));
+  const QFORM = /^\s*(¿|(que|quien|quienes|cual|cuales|donde|cuando|cuanto|cuantos)\b)/;
+  const isQ = t => /[¿?]/.test(String(t)) || QFORM.test(norm(t));
   const toks = s => norm(s).split(' ').filter(w => w && !STOP.has(w));
   function lev(a, b) { const m = a.length, n = b.length; if (!m) return n; if (!n) return m; let p = Array.from({ length: n + 1 }, (_, j) => j); for (let i = 1; i <= m; i++) { const c = [i]; for (let j = 1; j <= n; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); p = c; } return p[n]; }
-  const close = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && lev(a, b) <= (Math.max(a.length, b.length) >= 7 ? 2 : 1)) || (a.length >= 5 && b.startsWith(a)) || (b.length >= 5 && a.startsWith(b)) || (a.length > 3 && b.length > 3 && (a.endsWith('s') ? a.slice(0, -1) : a) === (b.endsWith('s') ? b.slice(0, -1) : b));
+  const close = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && lev(a, b) <= (Math.max(a.length, b.length) >= 7 ? 2 : 1)) || (a.length >= 4 && b.startsWith(a)) || (b.length >= 4 && a.startsWith(b)) || (a.length > 3 && b.length > 3 && (a.endsWith('s') ? a.slice(0, -1) : a) === (b.endsWith('s') ? b.slice(0, -1) : b));
   function sim(typed, answer) {
-    if (!norm(typed)) return 0;
-    if (norm(typed) === norm(answer)) return 1;
+    const nt = norm(typed), na = norm(answer);
+    if (!nt || !na) return 0;
+    if (nt === na) return 1;
+    if (na.length >= 4 && (nt.includes(na) || (nt.length >= 4 && na.includes(nt)))) return 0.9;
     const t = toks(typed), a = toks(answer);
     if (!t.length || !a.length) return 0;
     const hit = a.filter(w => t.some(x => close(x, w))).length;
     return hit / a.length;
   }
-  const judgeOne = (typed, answer) => sim(typed, answer) >= 0.5;
+  const judgeOne = (typed, answer, alias) => [answer, ...(alias || [])].some(a => sim(typed, a) >= 0.5);
   function judgeFeud(typed, answers, open) {
     let best = -1, bs = 0;
-    answers.forEach((a, k) => { if (open[k]) return; const s = sim(typed, a[0]); if (s >= 0.5 && (s > bs || (s === bs && best >= 0 && a[1] > answers[best][1]))) { best = k; bs = s; } });
+    answers.forEach((a, k) => { if (open[k]) return; const s = Math.max(...[a[0], ...(a[2] || [])].map(x => sim(typed, x))); if (s >= 0.5 && (s > bs || (s === bs && best >= 0 && a[1] > answers[best][1]))) { best = k; bs = s; } });
     return best;
   }
 
@@ -31,12 +35,13 @@ window.makeEngine = function (D, onChange) {
   let S = null;
   try { S = JSON.parse(localStorage.getItem('xmas-state') || 'null'); } catch (e) {}
   if (!S || S.v !== 3) S = fresh();
+  if (!S.settings.jr2) { S.settings.jeoRounds = 2; S.settings.jr2 = true; }
   try { localStorage.setItem('xmas-state', JSON.stringify(S)); } catch (e) {}
   function fresh(keep) {
     return {
       v: 3, code: (keep && keep.code) || code4(), key: (keep && keep.key) || key6(),
       phase: 'menu', paused: false, players: {}, order: [], hist: [],
-      settings: { games: ['feu', 'jeo', 'pre', 'bas', 'mil'], feuPasses: 3, jeoTeams: 4, jeoRounds: 1, finalists: 3, bastaRounds: 3, sound: true },
+      settings: { games: ['feu', 'jeo', 'pre', 'bas', 'mil'], feuPasses: 3, jeoTeams: 4, jeoRounds: 2, finalists: 3, bastaRounds: 3, sound: true },
       gi: 0, g: {}, ev: [], evId: 0, last: null
     };
   }
@@ -158,7 +163,7 @@ window.makeEngine = function (D, onChange) {
     const value = (v + 1) * 100 * (g.round + 1);
     g.used[key] = 1;
     const dd = g.dd.includes(key);
-    g.clue = { key, ci, v, value, dd, wager: 0, buzzOpen: !dd, out: [], answering: null, deadline: 0, revealed: false, result: null, last: null };
+    g.clue = { key, ci, v, value, dd, wager: 0, buzzOpen: false, out: [], answering: dd ? null : { t: g.picker, p: null }, deadline: dd ? 0 : now() + 30000, revealed: false, result: null, last: null };
     g.step = dd ? 'dd' : 'clue';
     if (dd) ev('banner', '¡Casilla doble!', { sub: `${g.teams[g.picker].name} apuesta antes de ver la pregunta` }); else ev('open', '');
   }
@@ -178,13 +183,15 @@ window.makeEngine = function (D, onChange) {
     if (c.answering.p && c.answering.p !== p) return;
     if (!c.answering.p && jTeamOf(p) !== c.answering.t) return;
     c.answering.p = p;
-    jResolve(judgeOne(text, D.jeopardy[g.round][c.ci][1][c.v][1]), text);
+    const ans = D.jeopardy[g.round][c.ci][1][c.v][1];
+    jResolve(judgeOne(text, ans, (D.jeopardyAlias || {})[ans]), text);
   }
   function jResolve(ok, text) {
     const g = S.g, c = g.clue; const t = c.answering ? c.answering.t : -1; if (t < 0) return;
     const val = c.dd ? c.wager : c.value;
-    c.last = { t, p: c.answering.p, text: text || '', ok };
-    if (ok) { g.teams[t].score += val; g.picker = t; c.revealed = true; c.result = 'ok'; c.answering = null; c.deadline = 0; ev('ding', `¡Correcto! +${val} para ${g.teams[t].name}`); }
+    const bonus = ok && isQ(text) ? 50 * (g.round + 1) : 0;
+    c.last = { t, p: c.answering.p, text: text || '', ok, bonus };
+    if (ok) { g.teams[t].score += val + bonus; g.picker = t; c.revealed = true; c.result = 'ok'; c.answering = null; c.deadline = 0; ev('ding', `¡Correcto! +${val} para ${g.teams[t].name}${bonus ? ` y +${bonus} por contestar en forma de pregunta` : ''}`); }
     else {
       g.teams[t].score -= val; c.out.push(t); c.answering = null; c.deadline = 0; ev('strike', `${text ? '«' + text + '» ' : ''}No. −${val} para ${g.teams[t].name}`);
       if (c.dd || c.out.length >= g.teams.length) { c.revealed = true; c.result = 'none'; }
@@ -194,8 +201,8 @@ window.makeEngine = function (D, onChange) {
   function jFlip() { // el host corrige la última calificación
     const g = S.g, c = g.clue; if (!c || !c.last) return 'No hay respuesta que corregir';
     const L = c.last, val = c.dd ? c.wager : c.value, t = L.t;
-    if (L.ok) { g.teams[t].score -= 2 * val; L.ok = false; c.result = c.out.length + 1 >= g.teams.length ? 'none' : null; if (!c.out.includes(t)) c.out.push(t); if (c.result !== 'none' && !c.dd) { c.revealed = false; c.buzzOpen = true; } else { c.revealed = true; c.result = 'none'; } ev('info', 'Corregido: no contaba'); }
-    else { g.teams[t].score += 2 * val; L.ok = true; c.out = c.out.filter(x => x !== t); c.revealed = true; c.result = 'ok'; c.buzzOpen = false; c.answering = null; g.picker = t; ev('ding', 'Corregido: sí contaba'); }
+    if (L.ok) { g.teams[t].score -= 2 * val + (L.bonus || 0); L.bonus = 0; L.ok = false; c.result = c.out.length + 1 >= g.teams.length ? 'none' : null; if (!c.out.includes(t)) c.out.push(t); if (c.result !== 'none' && !c.dd) { c.revealed = false; c.buzzOpen = true; } else { c.revealed = true; c.result = 'none'; } ev('info', 'Corregido: no contaba'); }
+    else { L.bonus = isQ(L.text) ? 50 * (g.round + 1) : 0; g.teams[t].score += 2 * val + L.bonus; L.ok = true; c.out = c.out.filter(x => x !== t); c.revealed = true; c.result = 'ok'; c.buzzOpen = false; c.answering = null; g.picker = t; ev('ding', 'Corregido: sí contaba'); }
   }
   function jNobody() { const c = S.g.clue; if (!c) return; c.revealed = true; c.result = 'none'; c.buzzOpen = false; c.answering = null; c.deadline = 0; }
   function jNext() {
@@ -213,7 +220,7 @@ window.makeEngine = function (D, onChange) {
     }
     if (g.step === 'board') { g.step = 'fjw'; g.fj = { wagers: {}, answers: {}, judged: {}, deadline: 0 }; ev('banner', 'Final Jeopardy', { sub: 'Cada equipo apuesta desde su celular' }); return; }
     if (g.step === 'fjw') { g.step = 'fjq'; g.fj.deadline = now() + 40000; return; }
-    if (g.step === 'fjq') { g.step = 'fjr'; g.teams.forEach((t, i) => { const a = g.fj.answers[i]; g.fj.judged[i] = !!(a && judgeOne(a, D.jeopardyFinal[2])); }); return; }
+    if (g.step === 'fjq') { g.step = 'fjr'; g.teams.forEach((t, i) => { const a = g.fj.answers[i]; g.fj.judged[i] = !!(a && judgeOne(a, D.jeopardyFinal[2], ['dickens'])); }); return; }
     if (g.step === 'fjr') {
       g.teams.forEach((t, i) => { const w = Math.min(Math.max(0, +g.fj.wagers[i] || 0), Math.max(0, t.score)); t.score += g.fj.judged[i] ? w : -w; });
       const ord = g.teams.map((t, i) => i).sort((a, b) => g.teams[b].score - g.teams[a].score);
@@ -326,6 +333,25 @@ window.makeEngine = function (D, onChange) {
   }
   function robNext() { const ord = ranking(); S.rob.turn++; S.rob.rolled = false; S.rob.die = 0; S.rob.rule = ''; if (S.rob.turn % ord.length === 0) S.rob.lap++; }
 
+  // ---------- terminar el juego actual de golpe ----------
+  function endNow() {
+    if (S.phase !== 'play') return 'Solo se puede durante un juego';
+    const G = curGame(), g = S.g;
+    if (G === 'feu' && g.teams) {
+      const w = g.scores[0] === g.scores[1] ? -1 : (g.scores[0] > g.scores[1] ? 0 : 1); const lines = [];
+      g.teams.forEach((t, i) => { const pts = w < 0 ? 3 : (i === w ? 5 : 2); t.members.forEach(p => addPts(p, pts, '100 Mexicanos')); lines.push(`${t.name}: ${g.scores[i]} → +${pts} c/u`); });
+      return endGame({ title: w < 0 ? '¡Empate!' : `¡Ganó ${g.teams[w].name}!`, lines });
+    }
+    if (G === 'jeo' && g.teams && g.step !== 'teams') {
+      const ord = g.teams.map((t, i) => i).sort((a, b) => g.teams[b].score - g.teams[a].score); const award = [5, 3, 2, 1]; const lines = [];
+      ord.forEach((ti, k) => { const t = g.teams[ti]; const pts = award[k] || 1; t.members.forEach(p => addPts(p, pts, 'Jeopardy')); lines.push(`${k + 1}.º ${t.name}: ${t.score} → +${pts} c/u`); });
+      return endGame({ title: `¡Ganó ${g.teams[ord[0]].name}!`, lines });
+    }
+    if (G === 'mil' && g.finalists) return endGame({ title: 'Se acabó la gran final', lines: g.finalists.map(p => `${nameOf(p)}: +${g.results[p] || 0}`) });
+    const why = { pre: 'Atínale', bas: 'Basta' }[G]; const tally = {}; S.hist.filter(h => h.why === why).forEach(h => tally[h.p] = (tally[h.p] || 0) + h.d);
+    return endGame({ title: 'Se terminó ' + GAMES[G], lines: Object.entries(tally).sort((a, b) => b[1] - a[1]).map(([p, n]) => `${nameOf(p)}: +${n}`) });
+  }
+
   // ---------- botón "Siguiente" general ----------
   function next() {
     if (S.phase === 'menu') { S.phase = 'lobby'; return; }
@@ -402,6 +428,7 @@ window.makeEngine = function (D, onChange) {
       case 'rename': if (S.players[a.p]) S.players[a.p].name = String(a.v || '').slice(0, 16) || S.players[a.p].name; return;
       case 'settings': Object.assign(S.settings, a); return;
       case 'reset': { const keep = { code: S.code, key: S.key }; const pl = S.players, ord = S.order; S = fresh(keep); if (a.keepPlayers) { S.order = ord; Object.keys(pl).forEach(p => { S.players[p] = { ...pl[p], pts: 0 }; }); } return; }
+      case 'endNow': return endNow();
       case 'goto': if (S.settings.games.includes(a.g)) { S.gi = S.settings.games.indexOf(a.g); goIntro(); } return;
       // 100 mexicanos
       case 'feuTeam': if (curGame() === 'feu' && g.teams) { const p = a.p; g.teams.forEach(t => t.members = t.members.filter(x => x !== p)); g.teams[a.t ? 1 : 0].members.push(p); } return;
@@ -419,7 +446,7 @@ window.makeEngine = function (D, onChange) {
       case 'jPick': jPick(String(a.key)); return;
       case 'jFlip': return jFlip();
       case 'jNobody': jNobody(); return;
-      case 'jSay': if (g.clue && g.clue.answering) { g.clue.answering.p = g.clue.answering.p || g.teams[g.clue.answering.t].members[0]; jResolve(judgeOne(a.text, D.jeopardy[g.round][g.clue.ci][1][g.clue.v][1]), String(a.text || '')); } return;
+      case 'jSay': if (g.clue && g.clue.answering) { g.clue.answering.p = g.clue.answering.p || g.teams[g.clue.answering.t].members[0]; { const an = D.jeopardy[g.round][g.clue.ci][1][g.clue.v][1]; jResolve(judgeOne(a.text, an, (D.jeopardyAlias || {})[an]), String(a.text || '')); } } return;
       case 'jBuzzFor': jBuzz(a.p); return;
       case 'jWager': if (g.step === 'dd') { const m = g.teams[g.picker].members[0]; jWager(m, a.v); } return;
       case 'fjFlip': if (g.step === 'fjr') g.fj.judged[a.t] = !g.fj.judged[a.t]; return;

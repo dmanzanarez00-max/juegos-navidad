@@ -136,7 +136,7 @@ function bootTV() {
 // ---------- vistas de la pantalla ----------
 const RULES = {
   feu: ['Dos equipos sorteados al azar.', 'En cada pregunta pasa al frente uno de cada equipo. El primero en tocar el timbre contesta desde su celular.', 'Tres errores y el otro equipo puede robar. Equipo ganador: +5 a cada quien; el otro: +2.'],
-  jeo: ['Equipos que arma el host.', 'Escojan categoría y valor. El primero que toca el timbre contesta en su celular; si falla, se resta.', 'Hay casillas dobles escondidas y una pregunta final con apuesta. Lugares: +5, +3, +2, +1 a cada integrante.'],
+  jeo: ['Equipos que arma el host. El equipo que escoge contesta primero y, si acierta, sigue escogiendo.', 'Si falla, se le resta y se abre el timbre para que otro equipo robe. Contesten «¿Qué es…?» o «¿Quién es…?» y ganan bonus.', 'Hay casillas dobles con apuesta y una pregunta final para todos. Lugares: +5, +3, +2, +1 a cada integrante.'],
   pre: ['Cada quien juega solo.', 'Sale un producto y tienen 10 segundos para mandar su precio desde el celular.', 'Gana el que más se acerque sin pasarse: +1 por producto.'],
   bas: ['Gira la ruleta y a uno de ustedes le toca detenerla.', 'Llenen todas las categorías con esa letra. El primero que acabe aprieta ¡Basta!', 'Respuesta única 100, repetida 50. Los tres mejores de cada ronda: +3, +2, +1.'],
   mil: ['La gran final: juegan los primeros lugares.', 'Cinco preguntas, cada vez más difíciles. La segunda es tu seguro.', 'Comodines: 50:50, público y llamada a un amigo. Ganas 1, 2, 3, 5 u 8 puntos.']
@@ -218,7 +218,8 @@ function jeoView(V) {
     else {
       if (C.buzzOpen) st = '<span class="pill" style="font-size:36px">¡Al timbre!</span>';
       else if (C.answering) st = `<span class="pill" style="font-size:34px">Contesta ${C.answering.p ? esc(nm(V, C.answering.p)) : esc(J.teams[C.answering.t].name)} · <span data-dl="${C.deadline}"></span></span>`;
-      if (C.last) st += `<p class="lead" style="margin-top:10px">«${esc(C.last.text)}» ${C.last.ok ? '✓' : '✕'}</p>`;
+      if (C.last) st += `<p class="lead" style="margin-top:10px">«${esc(C.last.text)}» ${C.last.ok ? '✓' : '✕'}${C.last.bonus ? ` · bonus +${C.last.bonus} por preguntar` : ''}</p>`;
+      else if (C.answering && !C.dd) st += `<p class="lead" style="margin-top:10px;font-size:26px">Bonus si contestan «¿Qué es…?» o «¿Quién es…?»</p>`;
     }
     return `<div class="clue"><div><div class="cat">${esc(C.cat)} · ${C.dd ? 'Doble: ' + (C.wager || '?') : C.value}</div>${C.q ? `<div class="q">${esc(C.q)}</div>` : ''}${C.a ? `<div class="a">${esc(C.a)}</div>` : ''}<div style="margin-top:20px">${st}</div></div></div>${jTeamsBar(V, J, C.answering ? C.answering.t : -1)}`;
   }
@@ -341,7 +342,7 @@ function bootPhone() {
     if (P !== 'play') return h;
     return h + ({ feu: pFeu, jeo: pJeo, pre: pPre, bas: pBas, mil: pMil })[V.game]();
   }
-  const answerBox = (lab, act) => `<div class="pc keep"><h2>${lab}</h2><input class="in" id="ans" maxlength="60" autocomplete="off" autocapitalize="sentences" placeholder="Escribe tu respuesta"><button class="b pri" data-act="${act}">Mandar respuesta</button><p class="note">No importa si tiene errores de dedo: el juego la entiende.</p></div>`;
+  const answerBox = (lab, act, jeo) => `<div class="pc keep"><h2>${lab}</h2><input class="in" id="ans" maxlength="60" autocomplete="off" autocapitalize="sentences" placeholder="${jeo ? '¿Qué es…? / ¿Quién es…?' : 'Escribe tu respuesta'}"><button class="b pri" data-act="${act}">Mandar respuesta</button><p class="note">${jeo ? 'Si contestas en forma de pregunta («¿Quién es Freud?») ganan bonus. Los errores de dedo no importan.' : 'No importa si tiene errores de dedo: el juego la entiende.'}</p></div>`;
   function pFeu() {
     const F = V.feu; const t = F.teams.findIndex(x => x.members.includes(pid)); const tn = t >= 0 ? F.teams[t].name : '';
     if (F.step === 'draw') return wait(t >= 0 ? 'Te tocó: ' + esc(tn) : 'Mira la tele', 'Busca a tu equipo en la pantalla');
@@ -361,12 +362,12 @@ function bootPhone() {
     const C = J.clue;
     if (J.step === 'dd') return J.picker === t ? `<div class="pc keep"><h2>¡Casilla doble!</h2><p>¿Cuánto apuestan? Hasta ${C.max}.</p><input class="in" id="wager" type="number" inputmode="numeric" min="0" max="${C.max}"><button class="b pri" data-act="wager">Apostar</button></div>` : wait('Casilla doble de ' + esc(J.teams[J.picker].name));
     if (J.step === 'clue') {
-      if (C.answering && C.answering.t === t && (!C.answering.p || C.answering.p === pid)) return `<div class="pc"><p class="say">¡Contesta tu equipo! <span data-dl="${C.deadline}"></span></p></div>` + answerBox(esc(C.q), 'janswer');
+      if (C.answering && C.answering.t === t && (!C.answering.p || C.answering.p === pid)) return `<div class="pc"><p class="say">${C.out.length || C.dd ? '¡Contesta tu equipo!' : '¡Escogieron ustedes: contestan primero!'} <span data-dl="${C.deadline}"></span></p><p class="note" style="text-align:center">Pónganse de acuerdo; cualquiera del equipo lo escribe.</p></div>` + answerBox(esc(C.q), 'janswer', true);
       if (C.buzzOpen && !C.out.includes(t)) return `<div class="pc"><p style="text-align:center">${esc(C.q)}</p><button class="buzz" data-act="buzz" aria-label="Timbre"></button><p class="say">¡Toca el timbre!</p></div>`;
       return wait(C.answering ? 'Contesta ' + esc(J.teams[C.answering.t].name) : (C.a ? 'Respuesta: ' + esc(C.a) : 'Mira la tele'), esc(C.q));
     }
     if (J.step === 'fjw') return J.fj.wagered.includes(t) ? wait('Apuesta lista', 'Esperando a los demás equipos') : `<div class="pc keep"><h2>Final Jeopardy</h2><p>Categoría: <b>${esc(J.fj.cat)}</b>. ¿Cuánto apuesta ${esc(tn)}? Hasta ${Math.max(0, J.teams[t] ? J.teams[t].score : 0)}.</p><input class="in" id="wager" type="number" inputmode="numeric" min="0"><button class="b pri" data-act="fjwager">Apostar</button></div>`;
-    if (J.step === 'fjq') return J.fj.answered.includes(t) ? wait('Respuesta enviada', 'Puedes cambiarla mientras corre el tiempo') + answerBox(esc(J.fj.q), 'fj') : answerBox(esc(J.fj.q), 'fj');
+    if (J.step === 'fjq') return J.fj.answered.includes(t) ? wait('Respuesta enviada', 'Puedes cambiarla mientras corre el tiempo') + answerBox(esc(J.fj.q), 'fj', true) : answerBox(esc(J.fj.q), 'fj', true);
     return wait('Mira la tele');
   }
   function pPre() {
@@ -420,7 +421,7 @@ function bootPhone() {
     if (!V) return '';
     let h = `<div class="pc"><p class="note" style="margin:0">${esc(PH[V.phase] || '')}${V.phase !== 'menu' && V.phase !== 'lobby' ? ' · ' + esc(V.gameName) : ''}</p>`;
     const nl = nextLabel(); if (nl) h += `<button class="b pri" data-cmd="next" style="min-height:70px;font-size:22px">${esc(nl)}</button>`;
-    h += `<div class="row"><button class="b" data-cmd="pause">${V.paused ? '▶ Seguir' : '⏸ Pausar'}</button><button class="b" data-cmd="back">↩ Atrás</button></div></div>`;
+    h += `<div class="row"><button class="b" data-cmd="pause">${V.paused ? '▶ Seguir' : '⏸ Pausar'}</button><button class="b" data-cmd="back">↩ Atrás</button></div>${V.phase === 'play' ? '<button class="b" data-act="endnow">⏭ Terminar este juego ya</button>' : ''}</div>`;
     h += hostContext();
     h += `<details class="pc"><summary>Marcador y jugadores</summary><div class="plist">${V.players.map(p => `<div class="prow ${p.removed ? 'rm' : ''}"><img src="${A(p.orn)}" alt=""><div><b>${esc(p.name)}</b> · ${p.pts} pts</div><div class="ctr"><button data-pts="${p.id}" data-d="-1" aria-label="Quitar un punto">−</button><button data-pts="${p.id}" data-d="1" aria-label="Dar un punto">+</button><button data-rm="${p.id}" aria-label="${p.removed ? 'Regresar' : 'Sacar'} a ${esc(p.name)}">${p.removed ? '↺' : '✕'}</button></div></div>`).join('')}</div><p class="note">✕ saca a un jugador del juego; ↺ lo regresa.</p></details>`;
     h += `<details class="pc"><summary>Cuánto vale cada cosa</summary><div class="ref">${POINTS.map(p => `<p><b>${p[0]}:</b> ${p[1]}</p>`).join('')}<p><b>Millonario:</b> 1, 2, 3, 5 u 8 puntos según la pregunta; si falla después de la 2.ª se queda con 2.</p></div></details>`;
@@ -525,6 +526,7 @@ function bootPhone() {
     if (d.feuteam) { cmd('feuTeam', { p: d.feuteam, t: +d.t }); return; }
     if (d.feubuzz) { cmd('feuBuzzFor', { p: d.feubuzz }); return; }
     if (d.feutile) { cmd('feuTile', { k: +d.feutile }); return; }
+    if (d.act === 'endnow') { if (b.dataset.sure) cmd('endNow'); else { b.dataset.sure = 1; b.textContent = '¿Seguro? Se reparten los puntos como van. Toca otra vez'; } return; }
     if (d.act === 'feusay') { const v = val('say'); if (v) cmd('feuSay', { text: v }); return; }
     if (d.act === 'feuadd') { cmd('feuAdd', { q: val('fq'), a: $('#fa') ? $('#fa').value : '' }); toast('Pregunta agregada'); return; }
     if (d.jtc) { cmd('jTeamCount', { n: +d.jtc }); return; }
