@@ -279,7 +279,8 @@ function bootPhone() {
   const me = () => V && pl(V, pid);
   let wasNeed = false;
   let renderT = null;
-  let lastKey = '';
+  let lastKey = '', lastTouch = 0;
+  ['pointerdown', 'touchstart', 'mousedown'].forEach(t => document.addEventListener(t, () => { lastTouch = Date.now(); }, { capture: true, passive: true }));
   function screenKey() {
     if (!V) return 'none'; const F = V.feu, J = V.jeo, P = V.pre, B = V.bas, M = V.mil;
     let k = tab + '|' + V.phase + '|' + (V.game || '') + '|' + editing;
@@ -290,9 +291,12 @@ function bootPhone() {
     }
     return k;
   }
-  function render() {
+  function render(force) {
     const ae = document.activeElement; const key = screenKey();
-    if (ae && ae.closest && ae.closest('.keep') && /INPUT|TEXTAREA|SELECT/.test(ae.tagName) && key === lastKey) { clearTimeout(renderT); renderT = setTimeout(render, 700); return; }
+    const typing = ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName) && key === lastKey;
+    if (!force && (typing || (Date.now() - lastTouch < 600 && key === lastKey))) { clearTimeout(renderT); renderT = setTimeout(render, 500); return; }
+    // guarda lo escrito para no perderlo al redibujar
+    const kept = {}; if (key === lastKey) document.querySelectorAll('input[id],textarea[id],select[id]').forEach(el => { if (el.type !== 'file') kept[el.id] = el.value; });
     lastKey = key;
     let h = `<div class="app"><div class="top"><span class="ph">${isHost ? (tab === 'ctl' ? 'Control del juego' : 'Mi juego') : 'Jugador'}</span><span class="note"><span class="dot ${live ? 'on' : ''}"></span>${live ? 'Conectado' : 'Conectando…'} · Sala ${esc(SALA)}</span></div>`;
     if (!V) h += `<div class="pc wait"><img src="${A('esfera-campana')}" alt=""><h2>Buscando la pantalla…</h2><p>Asegúrate de que la pantalla grande esté abierta.</p></div>`;
@@ -301,6 +305,7 @@ function bootPhone() {
     h += '</div>';
     if (isHost) h += `<div class="tabs"><button data-tab="ctl" class="${tab === 'ctl' ? 'on' : ''}">Controlar</button><button data-tab="play" class="${tab === 'play' ? 'on' : ''}">Jugar${V && needs() ? '<span class="badge">¡Te toca!</span>' : ''}</button></div>`;
     document.body.innerHTML = h;
+    Object.entries(kept).forEach(([id, v]) => { const el = document.getElementById(id); if (el && v !== '' && el.tagName !== 'SELECT') el.value = v; });
   }
   // ¿El jugador tiene algo que hacer ahora?
   function needs() {
@@ -489,13 +494,13 @@ function bootPhone() {
   document.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
     const d = b.dataset; const val = id => { const el = $('#' + id); return el ? el.value.trim() : ''; };
-    if (d.tab) { tab = d.tab; render(); return; }
-    if (d.orn) { draft.orn = d.orn; draft.name = val('jn') || draft.name; store.set('xmas-draft-' + SALA, draft); render(); return; }
+    if (d.tab) { tab = d.tab; render(true); return; }
+    if (d.orn) { draft.orn = d.orn; draft.name = val('jn') || draft.name; store.set('xmas-draft-' + SALA, draft); render(true); return; }
     if (d.cmd) { cmd(d.cmd); return; }
     if (d.act === 'join') { draft.name = val('jn'); if (!draft.name) return toast('Escribe tu nombre'); if (!draft.orn) return toast('Escoge una esfera'); store.set('xmas-draft-' + SALA, draft); editing = false; send({ t: 'join', name: draft.name, orn: draft.orn }); if (isHost) { soloHost = false; store.set('xmas-solohost', false); } return; }
-    if (d.act === 'solohost') { soloHost = true; store.set('xmas-solohost', true); tab = 'ctl'; render(); return; }
-    if (d.act === 'unsolo') { soloHost = false; store.set('xmas-solohost', false); render(); return; }
-    if (d.act === 'edit') { editing = true; render(); return; }
+    if (d.act === 'solohost') { soloHost = true; store.set('xmas-solohost', true); tab = 'ctl'; render(true); return; }
+    if (d.act === 'unsolo') { soloHost = false; store.set('xmas-solohost', false); render(true); return; }
+    if (d.act === 'edit') { editing = true; render(true); return; }
     if (d.act === 'buzz') { send({ t: 'buzz' }); try { navigator.vibrate && navigator.vibrate(80); } catch (x) {} b.disabled = true; return; }
     if (d.act === 'answer' || d.act === 'janswer') { const v = val('ans'); if (!v) return toast('Escribe tu respuesta'); send({ t: 'answer', text: v }); document.activeElement && document.activeElement.blur(); return; }
     if (d.act === 'fj') { const v = val('ans'); if (!v) return toast('Escribe tu respuesta'); send({ t: 'fj', text: v }); toast('Respuesta enviada'); return; }
@@ -536,11 +541,12 @@ function bootPhone() {
   });
   let basT = null;
   document.addEventListener('input', e => {
-    const i = e.target; if (i.dataset && i.dataset.bas !== undefined) { basDraft[i.dataset.bas] = i.value; store.set('xmas-bas-' + SALA + basKey, basDraft); clearTimeout(basT); basT = setTimeout(() => send({ t: 'bastaAns', a: basDraft }), 600);
+    const i = e.target;
+    if (i.id === 'jn') { draft.name = i.value; store.set('xmas-draft-' + SALA, draft); } if (i.dataset && i.dataset.bas !== undefined) { basDraft[i.dataset.bas] = i.value; store.set('xmas-bas-' + SALA + basKey, basDraft); clearTimeout(basT); basT = setTimeout(() => send({ t: 'bastaAns', a: basDraft }), 600);
       const full = V && V.bas && V.bas.cats.every((c, k) => (basDraft[k] || '').trim()); const btn = document.querySelector('[data-act="basta"]'); if (btn) btn.disabled = !full; }
   });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'ans') { const b = document.querySelector('[data-act="answer"],[data-act="janswer"],[data-act="fj"]'); b && b.click(); } if (e.key === 'Enter' && e.target.id === 'price') { const b = document.querySelector('[data-act="price"]'); b && b.click(); } });
-  document.addEventListener('focusout', () => setTimeout(() => { const ae = document.activeElement; if (!(ae && ae.closest && ae.closest('.keep'))) render(); }, 80));
+  document.addEventListener('focusout', () => { clearTimeout(renderT); renderT = setTimeout(render, 700); });
   render();
 }
 
