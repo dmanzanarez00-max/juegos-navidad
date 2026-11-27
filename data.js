@@ -91,21 +91,29 @@ products: [
 ],
 
 // ---------- Basta ----------
-bastaCategories: ['Nombre','Apellido','Ciudad o país','Flor o fruto','Animal','Marca','Cultura pop','Cualquier cosa'],
+bastaCategories: ['Nombre','Apellido','Ciudad o país','Flor o fruto','Animal','Marca','Película o serie','Comida o bebida'],
 bastaLetters: 'ABCDEFGIJLMNOPRSTV'.split(''),
 
 // ---------- ¿Quién quiere ser millonario? ----------
 // 5 niveles; en cada nivel varias preguntas: [pregunta, [A,B,C,D], índice correcto]
 millionaire: [
-[['¿De qué color es la nariz de Rodolfo el reno?',['Azul','Roja','Verde','Dorada'],1],['¿Qué se rompe en las posadas?',['La piñata','Las esferas','El nacimiento','Las velas'],0],['¿Cuántas uvas se comen en Año Nuevo?',['10','12','7','24'],1],['¿Cómo se llama el muñeco de nieve de «Frozen»?',['Olaf','Sven','Hans','Kristoff'],0]],
-[['¿De qué país es originaria la flor de nochebuena?',['España','Brasil','México','Italia'],2],['¿Cómo se llama el niño de «Mi pobre angelito»?',['Kevin','Kyle','Buddy','Charlie'],0],['¿Qué se come el 2 de febrero?',['Tamales','Bacalao','Pozole','Romeritos'],0],['¿Qué personaje de Dickens odia la Navidad?',['Oliver Twist','Ebenezer Scrooge','David Copperfield','Tiny Tim'],1]],
-[['¿Cuántas posadas se celebran?',['7','9','12','5'],1],['¿Quién canta «All I Want for Christmas Is You»?',['Mariah Carey','Celine Dion','Whitney Houston','Christina Aguilera'],0],['¿Qué país regala cada año el árbol de Navidad de Trafalgar Square en Londres?',['Suecia','Noruega','Finlandia','Dinamarca'],1],['¿Quién escribió «Cuento de Navidad»?',['Mark Twain','Charles Dickens','Oscar Wilde','Jane Austen'],1]],
-[['¿Quién compuso la música de «El cascanueces»?',['Mozart','Chaikovski','Beethoven','Vivaldi'],1],['¿Qué ciudad celebra la Noche de Rábanos el 23 de diciembre?',['Puebla','Oaxaca','Morelia','Mérida'],1],['¿En qué año se estrenó «Mi pobre angelito»?',['1988','1990','1992','1995'],1],['¿En qué país es tradición cenar KFC en Navidad?',['Corea del Sur','China','Japón','Filipinas'],2]],
-[['¿Cuántos regalos en total se dan en la canción «Los doce días de Navidad»?',['78','144','364','365'],2],['¿En qué año se publicó «Cuento de Navidad» de Dickens?',['1812','1843','1865','1901'],1],['¿Qué diplomático llevó la nochebuena a Estados Unidos y le dio su nombre en inglés?',['Joel Poinsett','John Adams','Thomas Jefferson','Benjamin Franklin'],0],['Según la tradición, ¿en qué lugar se celebraron las primeras posadas?',['Taxco','Acolman','Cholula','Querétaro'],1]]
+[['¿En qué estado está Celaya, la tierra de la cajeta?',['Querétaro','Guanajuato','Jalisco','Michoacán'],1],['¿Cuál es el hueso más largo del cuerpo humano?',['Tibia','Húmero','Fémur','Peroné'],2],['¿Cuántos jugadores tiene cada equipo en la cancha en voleibol?',['5','6','7','9'],1],['¿Quién pintó el mural «Sueño de una tarde dominical en la Alameda Central»?',['José Clemente Orozco','David Alfaro Siqueiros','Rufino Tamayo','Diego Rivera'],3]],
+[['¿Cuál es la capital de Canadá?',['Toronto','Montreal','Ottawa','Vancouver'],2],['¿Qué elemento químico tiene el símbolo «K»?',['Calcio','Kriptón','Potasio','Carbono'],2],['¿Quién compuso «Bésame mucho»?',['Agustín Lara','Consuelo Velázquez','Armando Manzanero','José Alfredo Jiménez'],1],['¿Cuál de estos países NO tiene salida al mar?',['Ecuador','Uruguay','Bolivia','Colombia'],2]],
+[['¿En qué año entró en vigor el TLCAN?',['1990','1992','1994','1996'],2],['Según la tradición, ¿en qué año se fundó México-Tenochtitlan?',['1250','1325','1428','1521'],1],['¿En qué país está la antigua ciudad de Petra?',['Egipto','Jordania','Siria','Turquía'],1],['¿Quién compuso la música de «El cascanueces»?',['Mozart','Beethoven','Chaikovski','Vivaldi'],2]],
+[['¿Qué número es MCMXCIX en romano?',['1499','1989','1999','2099'],2],['¿Quién hizo el famoso experimento de obediencia con «descargas eléctricas»?',['Philip Zimbardo','Stanley Milgram','B. F. Skinner','Solomon Asch'],1],['Contando sus territorios, ¿qué país tiene más husos horarios?',['Rusia','Estados Unidos','China','Francia'],3],['¿En qué año se publicó «Cuento de Navidad» de Dickens?',['1812','1843','1865','1901'],1]],
+[['¿Cuántos regalos se dan en total en la canción «Los doce días de Navidad»?',['78','144','364','365'],2],['¿Qué diplomático llevó la nochebuena a Estados Unidos y le dio su nombre en inglés?',['Joel Poinsett','John Adams','Thomas Jefferson','Benjamin Franklin'],0],['¿Quién ordenó construir el Castillo de Chapultepec?',['Maximiliano de Habsburgo','El virrey Bernardo de Gálvez','Porfirio Díaz','Agustín de Iturbide'],1],['¿Qué arquitecto mexicano ganó el Premio Pritzker en 1980?',['Ricardo Legorreta','Luis Barragán','Teodoro González de León','Pedro Ramírez Vázquez'],1]]
 ],
 ladder: [1,2,3,5,8],
 
 ornaments: ['esfera-luna','esfera-fresa','esfera-pez','esfera-reloj','esfera-cara','esfera-campana','esfera-flor','esfera-tetera','esfera-pina','esfera-hongo','esfera-medallon','esfera-campana-reloj'],
 
-robRules: ['Roba el regalo de quien quieras','Roba el regalo de quien quieras','Cambia tu regalo con el de tu izquierda','Todos pasan su regalo a la derecha','Te quedas como estás','¡Blindado! Nadie te roba en la siguiente vuelta']
+// ---------- Ronda de robo ----------
+// El dado decide qué tienes que hacer para robar
+robDie: ['Confiesa algo','Haz un reto','Cuentas rápidas','Tráeme algo','Tu víctima te pone el reto','¡Robo gratis!'],
+robRetos: {
+  1: ['Confiesa el regalo más feo que te han dado y quién te lo dio.','Confiesa la peor excusa que has puesto para no ir a una fiesta.','Confiesa tu crush famoso más vergonzoso.','Confiesa la última mentira que dijiste.','Confiesa qué canción cantas cuando nadie te oye.','Confiesa a quién de esta mesa le copiarías el outfit.','Confiesa lo más caro que has comprado y de lo que te arrepientes.','Confiesa qué es lo último que buscaste en Google.','Confiesa el apodo más ridículo que te han puesto.','Confiesa qué serie viste completa y te da pena admitirlo.'],
+  2: ['Canta el coro de un villancico en voz de ópera.','Imita a alguien de esta mesa hasta que adivinen quién es.','Baila 15 segundos sin música.','Haz un brindis de boda… para el regalo que quieres robar.','Habla con acento español hasta tu siguiente turno.','Di sin equivocarte: «Pablito clavó un clavito, ¿qué clavito clavó Pablito?»','Haz tu mejor pose de catálogo de Liverpool.','Convence en 20 segundos a tu víctima de que te dé su regalo.','Narra lo que está pasando en la mesa como partido de futbol.','Actúa una escena de telenovela con tu víctima.'],
+  4: ['Trae algo rojo en 20 segundos.','Trae una cuchara en 15 segundos.','Trae un zapato que no sea tuyo.','Trae algo que empiece con la letra P.','Trae algo verde.','Trae algo navideño que no esté en la mesa.','Trae tres cosas distintas en 20 segundos.','Trae algo que tenga un número escrito.'],
+  5: ['Tu víctima te pone el reto que quiera (todo PG-13).']
+}
 };

@@ -35,13 +35,13 @@ window.makeEngine = function (D, onChange) {
   let S = null;
   try { S = JSON.parse(localStorage.getItem('xmas-state') || 'null'); } catch (e) {}
   if (!S || S.v !== 3) S = fresh();
-  if (!S.settings.jr2) { S.settings.jeoRounds = 2; S.settings.jr2 = true; }
+    if (!S.settings.jr2) { S.settings.jeoRounds = 2; S.settings.jr2 = true; }
   try { localStorage.setItem('xmas-state', JSON.stringify(S)); } catch (e) {}
   function fresh(keep) {
     return {
       v: 3, code: (keep && keep.code) || code4(), key: (keep && keep.key) || key6(),
       phase: 'menu', paused: false, players: {}, order: [], hist: [],
-      settings: { games: ['feu', 'jeo', 'pre', 'bas', 'mil'], feuPasses: 3, jeoTeams: 4, jeoRounds: 2, finalists: 3, bastaRounds: 3, sound: true },
+      settings: { games: ['feu', 'jeo', 'pre', 'bas', 'mil'], feuPasses: 3, jeoTeams: 4, jeoRounds: 2, finalists: 3, bastaRounds: 3, robLaps: 1, sound: true },
       gi: 0, g: {}, ev: [], evId: 0, last: null
     };
   }
@@ -73,7 +73,7 @@ window.makeEngine = function (D, onChange) {
   function afterResults() { S.phase = 'standings'; }
   function afterStandings() {
     if (S.gi + 1 < S.settings.games.length) { S.gi++; goIntro(); }
-    else { S.phase = 'final'; S.rob = { turn: 0, lap: 1, die: 0, rule: '' }; ev('win', 'Fin del juego'); }
+    else { S.phase = 'final'; robInit(); ev('win', 'Fin del juego'); }
   }
 
   // ===================== 100 MEXICANOS =====================
@@ -259,19 +259,34 @@ window.makeEngine = function (D, onChange) {
 
   // ===================== BASTA =====================
   INIT.bas = () => { S.g = { round: 0, rounds: S.settings.bastaRounds, cats: S.settings.bastaCats || D.bastaCategories, usedL: [], spinOrder: shuffle(active()), step: 'ready' }; };
-  function basStartRound() { const g = S.g; g.step = 'spin'; g.spinner = g.spinOrder[g.round % g.spinOrder.length]; g.letter = ''; g.answers = {}; g.bastaBy = null; g.lockAt = 0; g.invalid = {}; g.cell = {}; g.roundPts = {}; ev('banner', `Basta · ronda ${g.round + 1} de ${g.rounds}`, { sub: `${nameOf(g.spinner)} detiene la ruleta` }); }
+  function basStartRound() { const g = S.g; g.step = 'spin'; g.spinner = g.spinOrder[g.round % g.spinOrder.length]; g.letter = ''; g.answers = {}; g.bastaBy = null; g.lockAt = 0; g.invalid = {}; g.votes = {}; g.force = {}; g.voted = []; g.cell = {}; g.roundPts = {}; ev('banner', `Basta · ronda ${g.round + 1} de ${g.rounds}`, { sub: `${nameOf(g.spinner)} detiene la ruleta` }); }
   function basStop(p) { const g = S.g; if (g.step !== 'spin') return; if (p && p !== g.spinner) return; const pool = D.bastaLetters.filter(l => !g.usedL.includes(l)); g.letter = pool[rnd(pool.length)] || 'S'; g.usedL.push(g.letter); g.step = 'write'; g.started = now(); ev('ding', 'Letra ' + g.letter); }
   function basAnswers(p, a) { const g = S.g; if (!['write', 'lock'].includes(g.step) || !S.players[p]) return; const o = {}; g.cats.forEach((c, i) => { o[i] = String((a && a[i]) || '').slice(0, 40); }); g.answers[p] = o; }
-  function basBasta(p) { const g = S.g; if (g.step !== 'write') return; g.bastaBy = p; g.step = 'lock'; g.lockAt = now() + 3000; ev('basta', '¡BASTA!', { sub: 'Lo picó ' + nameOf(p) }); }
+  function basBasta(p) { const g = S.g; if (g.step !== 'write') return; g.bastaBy = p; g.step = 'lock'; g.lockAt = now() + 3000; ev('basta', '¡BASTA!', p ? { sub: 'Lo picó ' + nameOf(p) } : {}); }
   function basScore() {
-    const g = S.g; g.step = 'review'; g.cell = {}; g.roundPts = {};
-    const ps = Object.keys(g.answers);
+    const g = S.g; g.step = 'review'; g.cell = {}; g.roundPts = {}; g.invalid = {}; g.votes = g.votes || {}; g.force = g.force || {}; g.voted = g.voted || [];
+    const ps = Object.keys(g.answers); const others = Math.max(0, ps.length - 1); const need = Math.floor(others / 2) + 1;
+    g.need = need;
     g.cats.forEach((c, ci) => {
-      const vals = ps.map(p => { const raw = g.answers[p][ci] || ''; const n = norm(raw); const ok = n && n[0] === norm(g.letter) && !g.invalid[p + '|' + ci]; return { p, n, ok }; });
+      const vals = ps.map(p => {
+        const k = p + '|' + ci; const raw = g.answers[p][ci] || ''; const n = norm(raw);
+        const auto = !!n && n.length >= 2 && n[0] === norm(g.letter);
+        const voteBad = (g.votes[k] || []).length >= need && others > 0;
+        const ok = k in g.force ? !g.force[k] && !!n : auto && !voteBad;
+        if (n && !ok) g.invalid[k] = true;
+        return { p, n, ok };
+      });
       vals.forEach(v => { let pts = 0; if (v.ok) { const dup = vals.some(o => o.p !== v.p && o.ok && (o.n === v.n || (o.n.length >= 7 && lev(o.n, v.n) <= 1))); pts = dup ? 50 : 100; } g.cell[v.p + '|' + ci] = pts; g.roundPts[v.p] = (g.roundPts[v.p] || 0) + pts; });
     });
   }
-  function basToggle(p, ci) { const g = S.g; if (g.step !== 'review') return; const k = p + '|' + ci; g.invalid[k] = !g.invalid[k]; basScore(); }
+  // el host puede forzar: si ahora cuenta → se anula; si no cuenta → vale
+  function basToggle(p, ci) { const g = S.g; if (g.step !== 'review') return; const k = p + '|' + ci; g.force[k] = !g.invalid[k]; basScore(); }
+  // los jugadores votan «no vale» por respuestas de otros
+  function basVote(voter, k) {
+    const g = S.g; if (g.step !== 'review' || !S.players[voter]) return; const [p] = String(k).split('|'); if (p === voter || !g.answers[p]) return;
+    const L = g.votes[k] = g.votes[k] || []; const i = L.indexOf(voter); if (i >= 0) L.splice(i, 1); else L.push(voter); basScore();
+  }
+  function basDone(voter) { const g = S.g; if (g.step === 'review' && !g.voted.includes(voter)) g.voted.push(voter); }
   function basNext() {
     const g = S.g;
     if (g.step === 'ready') return basStartRound();
@@ -327,11 +342,51 @@ window.makeEngine = function (D, onChange) {
   }
 
   // ---------- robo ----------
-  function robRoll(p) {
-    if (S.phase !== 'final') return; const ord = ranking(); const cur = ord[S.rob.turn % ord.length];
-    if (p && p !== cur) return; const n = 1 + rnd(6); S.rob.die = n; S.rob.rule = D.robRules[n - 1]; S.rob.rolled = true; ev('dice', D.robRules[n - 1], { n });
+  // Cada quien, en orden del ranking, decide si roba o se queda. Para robar tira el dado y cumple lo que salga.
+  // Un regalo robado 2 veces queda con candado. Cada persona tiene un turno por vuelta.
+  function robInit() {
+    const ord = ranking(); const hold = {}; ord.forEach((p, i) => hold[p] = i + 1);
+    S.rob = { v: 2, turn: 0, lap: 1, laps: S.settings.robLaps || 1, step: 'pick', hold, steals: {}, target: null, die: 0, kind: '', reto: '', math: null, until: 0, msg: '', log: [] };
   }
-  function robNext() { const ord = ranking(); S.rob.turn++; S.rob.rolled = false; S.rob.die = 0; S.rob.rule = ''; if (S.rob.turn % ord.length === 0) S.rob.lap++; }
+  function robCur() { const ord = ranking(); return ord[S.rob.turn % ord.length]; }
+  const MAXR = 2;
+  function robLocked(gift) { return (S.rob.steals[gift] || 0) >= MAXR; }
+  function robDecide(p, want) {
+    const R = S.rob; if (S.phase !== 'final' || !(R.step === 'choose' || (!want && R.step === 'target'))) return; if (p && p !== robCur()) return; const who = robCur();
+    if (!want) { robFinish(`${nameOf(who)} se queda con su regalo`); return; }
+    const ok = Object.keys(R.hold).some(q => q !== who && S.players[q] && !S.players[q].removed && !robLocked(R.hold[q]));
+    if (!ok) { robFinish('Todos los regalos tienen candado'); return; }
+    R.step = 'target';
+  }
+  function robTarget(p, q) {
+    const R = S.rob; if (R.step !== 'target') return; if (p && p !== robCur()) return; const who = robCur();
+    if (!R.hold[q] || q === who || robLocked(R.hold[q])) return; R.target = q; R.step = 'roll';
+  }
+  function robRoll(p) {
+    const R = S.rob; if (S.phase !== 'final' || R.step !== 'roll') return; if (p && p !== robCur()) return;
+    const n = 1 + rnd(6); R.die = n; R.kind = D.robDie[n - 1]; R.math = null;
+    if (n === 6) { ev('dice', R.kind, { n }); robResult(true); return; }
+    if (n === 3) { const a = 12 + rnd(8), b = 3 + rnd(7), c = 5 + rnd(20); R.math = { q: `${a} × ${b} + ${c}`, a: a * b + c, deadline: now() + 20000 }; R.reto = '¿Cuánto es ' + R.math.q + '? Tienes 20 segundos.'; }
+    else { const L = D.robRetos[n]; R.reto = L[rnd(L.length)]; }
+    R.step = 'reto'; ev('dice', R.kind, { n });
+  }
+  function robMath(p, v) { const R = S.rob; if (R.step !== 'reto' || !R.math || p !== robCur()) return; robResult(+v === R.math.a, 'Dijo ' + v); }
+  function robResult(ok, extra) {
+    const R = S.rob; if (R.step !== 'reto' && R.step !== 'roll') return; const who = robCur(), q = R.target;
+    if (ok) {
+      const g = R.hold[q]; R.hold[q] = R.hold[who]; R.hold[who] = g; R.steals[g] = (R.steals[g] || 0) + 1;
+      const lock = robLocked(g); R.log.push(`${nameOf(who)} le robó a ${nameOf(q)}`);
+      robFinish(`¡${nameOf(who)} le robó el regalo a ${nameOf(q)}!${lock ? ' Ese regalo ya tiene candado 🔒' : ''}`, 'win');
+    } else robFinish(`${nameOf(who)} no cumplió: no hay robo${extra ? ' (' + extra + ')' : ''}`);
+  }
+  function robFinish(msg, kind) { const R = S.rob; R.step = 'done'; R.msg = msg; R.until = now() + 5000; ev(kind || 'banner', msg); }
+  function robNext() {
+    const R = S.rob; if (!R || R.step === 'end') return; const ord = ranking();
+    if (R.step === 'pick') { R.step = 'choose'; ev('banner', '¡Empieza la ronda de robo!', { sub: 'Turno de ' + nameOf(robCur()) }); return; }
+    if (R.step !== 'done') { R.msg = nameOf(robCur()) + ' pasó su turno'; }
+    R.turn++; if (R.turn % ord.length === 0) { R.lap++; if (R.lap > R.laps) { R.step = 'end'; ev('win', '¡Se acabaron los robos!'); return; } }
+    Object.assign(R, { step: 'choose', target: null, die: 0, kind: '', reto: '', math: null, until: 0, msg: '' });
+  }
 
   // ---------- terminar el juego actual de golpe ----------
   function endNow() {
@@ -373,6 +428,12 @@ window.makeEngine = function (D, onChange) {
 
   // ---------- timers (los revisa la pantalla cada medio segundo) ----------
   function tick() {
+    if (!S.paused && S.phase === 'final' && S.rob && S.rob.v === 2) {
+      const R = S.rob, t = now();
+      if (R.step === 'reto' && R.math && t > R.math.deadline) { robResult(false, 'se acabó el tiempo'); return true; }
+      if (R.step === 'done' && R.until && t > R.until) { robNext(); return true; }
+      return false;
+    }
     if (S.paused || S.phase !== 'play') return false;
     const g = S.g, t = now(); let ch = false;
     if (curGame() === 'feu' && g.round && g.round.answerer && g.round.deadline && t > g.round.deadline) { feuApply(-1, '(se acabó el tiempo)'); ch = true; }
@@ -407,12 +468,18 @@ window.makeEngine = function (D, onChange) {
       case 'stop': if (curGame() === 'bas') basStop(p); break;
       case 'bastaAns': if (curGame() === 'bas') basAnswers(p, m.a); break;
       case 'basta': if (curGame() === 'bas') { basAnswers(p, m.a); basBasta(p); } break;
+      case 'bvote': if (curGame() === 'bas') basVote(p, m.k); break;
+      case 'bdone': if (curGame() === 'bas') basDone(p); break;
       case 'mpick': if (curGame() === 'mil') milPick(p, +m.k); break;
       case 'mfinal': if (curGame() === 'mil') milFinal(p); break;
       case 'mquit': if (curGame() === 'mil') milQuit(p); break;
       case 'mlife': if (curGame() === 'mil') milLife(m.k, p); break;
       case 'vote': if (curGame() === 'mil') milVote(p, +m.k); break;
       case 'roll': robRoll(p); break;
+      case 'robWant': robDecide(p, !!m.v); break;
+      case 'robTarget': robTarget(p, m.q); break;
+      case 'robMath': robMath(p, m.v); break;
+      case 'robJudge': if (S.rob && S.rob.step === 'reto' && !S.rob.math && p === S.rob.target) robResult(!!m.v); break;
       case 'cmd': if (role !== 'host') return 'Solo el host puede hacer eso'; err = cmd(m.c, m.a || {}); break;
     }
     changed(); return err;
@@ -460,6 +527,9 @@ window.makeEngine = function (D, onChange) {
       case 'milFinal': milFinal(); return;
       case 'milPickFor': { const k = +a.k; if (g.step === 'q' && !g.locked && !g.gone.includes(k)) g.pick = k; return; }
       case 'roll': robRoll(); return;
+      case 'robWant': robDecide(null, !!a.v); return;
+      case 'robTarget': robTarget(null, a.q); return;
+      case 'robJudge': if (S.rob && S.rob.step === 'reto') robResult(!!a.v); return;
     }
   }
 
@@ -468,7 +538,7 @@ window.makeEngine = function (D, onChange) {
     const V = { code: S.code, phase: S.phase, paused: S.paused, now: now(), ev: S.ev, settings: S.settings, gi: S.gi, game: curGame(), gameName: GAMES[curGame()], games: S.settings.games.map(k => GAMES[k]),
       players: S.order.map(p => ({ id: p, name: S.players[p].name, orn: S.players[p].orn, pts: S.players[p].pts, removed: S.players[p].removed })),
       rank: ranking(), results: S.results || null };
-    if (S.phase === 'final') V.rob = S.rob;
+    if (S.phase === 'final' && S.rob) { const R = S.rob; V.rob = Object.assign({}, R, { math: R.math ? { q: R.math.q, deadline: R.math.deadline } : null, cur: R.step === 'end' || R.step === 'pick' ? null : robCur(), max: MAXR }); }
     if (S.phase !== 'play') return V;
     const g = S.g, G = curGame();
     if (G === 'feu') {
@@ -487,7 +557,7 @@ window.makeEngine = function (D, onChange) {
     }
     if (G === 'bas') {
       const show = ['review', 'scored'].includes(g.step);
-      V.bas = { step: g.step, round: g.round, rounds: g.rounds, cats: g.cats, letter: g.letter, spinner: g.spinner, bastaBy: g.bastaBy, lockAt: g.lockAt, sent: Object.keys(g.answers || {}), answers: show ? g.answers : null, cell: show ? g.cell : null, roundPts: show ? g.roundPts : null, invalid: show ? g.invalid : null, awarded: g.awarded || [] };
+      V.bas = { step: g.step, round: g.round, rounds: g.rounds, cats: g.cats, letter: g.letter, spinner: g.spinner, bastaBy: g.bastaBy, lockAt: g.lockAt, sent: Object.keys(g.answers || {}), answers: show ? g.answers : null, cell: show ? g.cell : null, roundPts: show ? g.roundPts : null, invalid: show ? g.invalid : null, votes: show ? g.votes : null, force: show ? g.force : null, voted: g.voted || [], need: g.need || 1, awarded: g.awarded || [] };
     }
     if (G === 'mil') {
       V.mil = { step: g.step, finalists: g.finalists, fi: g.fi, results: g.results, ladder: D.ladder };
@@ -497,5 +567,6 @@ window.makeEngine = function (D, onChange) {
     return V;
   }
 
+  if (S.phase === 'final' && (!S.rob || S.rob.v !== 2)) robInit();
   return { get S() { return S; }, view, handle, tick, touch: changed, next, cmd: (c, a) => { const e = cmd(c, a || {}); changed(); return e; }, isKey: k => k === S.key, nameOf, GAMES, TEAMC };
 };

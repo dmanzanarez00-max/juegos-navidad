@@ -102,6 +102,7 @@ function bootTV() {
     if (e.type === 'banner' || e.type === 'win' || e.type === 'basta') h = `<div class="ov evbanner"><div style="text-align:center"><div class="banner">${esc(e.text)}</div>${e.sub ? `<div class="card" style="display:inline-block;padding:18px 40px;margin-top:-10px"><p class="lead">${esc(e.sub)}</p></div>` : ''}</div></div>`;
     if (e.type === 'buzz') h = `<div class="ov"><div class="buzzname"><img src="${orn(V, e.pid)}" alt=""><b>${esc(e.text)}</b></div></div>`;
     if (e.type === 'strike') h = `<div class="ov"><div class="bigx">✕</div></div>`;
+    if (e.type === 'dice' && e.n) h = `<div class="ov evbanner"><div style="text-align:center"><div class="rolling">${die(e.n)}</div><div class="banner" style="margin-top:20px">${esc(e.text)}</div></div></div>`;
     if (e.type === 'ding' || e.type === 'win') h += sparks();
     if (e.type === 'info' || e.type === 'join') { toastTV(e.text); }
     if (h) { o.innerHTML = h; clearTimeout(o._t); o._t = setTimeout(() => { o.innerHTML = ''; }, 2700); }
@@ -119,6 +120,7 @@ function bootTV() {
     ${seg('jeoRounds', [[1, '1 tablero'], [2, '2 tableros']], 'Jeopardy: tableros')}
     ${seg('bastaRounds', [[2, '2'], [3, '3'], [4, '4']], 'Basta: rondas')}
     ${seg('finalists', [[2, 'Los 2 primeros'], [3, 'Los 3 primeros']], 'Millonario: finalistas')}
+    ${seg('robLaps', [[1, '1 vuelta'], [2, '2 vueltas']], 'Ronda de robo')}
     ${seg('sound', [[true, 'Con sonido'], [false, 'Sin sonido']], 'Sonido')}
     <div class="srow"><span>Empezar de nuevo</span><div class="seg"><button data-act="reset" data-v="keep">Conservar jugadores</button><button data-act="reset" data-v="all">Borrar todo</button></div></div>
     </div></div>`;
@@ -138,8 +140,8 @@ const RULES = {
   feu: ['Dos equipos sorteados al azar.', 'En cada pregunta pasa al frente uno de cada equipo. El primero en tocar el timbre contesta desde su celular.', 'Tres errores y el otro equipo puede robar. Equipo ganador: +5 a cada quien; el otro: +2.'],
   jeo: ['Equipos que arma el host. El equipo que escoge contesta primero y, si acierta, sigue escogiendo.', 'Si falla, se le resta y se abre el timbre para que otro equipo robe. Contesten «¿Qué es…?» o «¿Quién es…?» y ganan bonus.', 'Hay casillas dobles con apuesta y una pregunta final para todos. Lugares: +5, +3, +2, +1 a cada integrante.'],
   pre: ['Cada quien juega solo.', 'Sale un producto y tienen 10 segundos para mandar su precio desde el celular.', 'Gana el que más se acerque sin pasarse: +1 por producto.'],
-  bas: ['Gira la ruleta y a uno de ustedes le toca detenerla.', 'Llenen todas las categorías con esa letra. El primero que acabe aprieta ¡Basta!', 'Respuesta única 100, repetida 50. Los tres mejores de cada ronda: +3, +2, +1.'],
-  mil: ['La gran final: juegan los primeros lugares.', 'Cinco preguntas, cada vez más difíciles. La segunda es tu seguro.', 'Comodines: 50:50, público y llamada a un amigo. Ganas 1, 2, 3, 5 u 8 puntos.']
+  bas: ['Gira la ruleta y a uno de ustedes le toca detenerla.', 'Llenen todas las categorías con esa letra. El primero que acabe aprieta ¡Basta!', 'Luego todos revisan en su celular y votan las respuestas que no valen; con mayoría se anulan. Única 100, repetida 50. Por ronda: +3, +2, +1.'],
+  mil: ['La gran final: juegan los primeros lugares.', 'Cinco preguntas de cultura general, cada vez más difíciles. La segunda es tu seguro.', 'Comodines: 50:50, público y llamada a un amigo. Ganas 1, 2, 3, 5 u 8 puntos.']
 };
 const POINTS = [['100 Mexicanos', 'Equipo ganador +5 cada uno · perdedor +2'], ['Jeopardy', 'Por lugar: +5, +3, +2, +1 cada integrante'], ['Atínale al precio', '+1 por cada producto que ganes'], ['Basta', 'Por ronda: +3, +2, +1'], ['Millonario', 'Hasta +8 para los finalistas']];
 const TREEPOS = [[50, 30], [38, 44], [62, 44], [30, 58], [50, 55], [70, 58], [24, 72], [42, 70], [58, 70], [76, 72], [36, 84], [64, 84]];
@@ -169,11 +171,22 @@ function mainView(V, S) {
   if (P === 'results') { const r = V.results || { title: '', lines: [] }; return `<div class="scr center" style="padding-top:180px"><div><div class="banner">${esc(r.title)}</div><div class="card" style="width:1100px;margin:30px auto 0;padding:30px 50px">${r.lines.map(l => `<p class="lead">${esc(l)}</p>`).join('')}</div></div></div>`; }
   if (P === 'standings') { const top = V.rank; const max = Math.max(1, ...top.map(id => pl(V, id).pts)); return `<div class="scr" style="padding-top:130px"><div class="center"><div class="banner">Así van</div></div><div class="race">${top.map((id, i) => { const p = pl(V, id); return `<div class="rrow"><span style="text-align:right">${i + 1}.º</span><img src="${A(p.orn)}" alt=""><span>${esc(p.name)}</span><div class="rbar"><i style="width:${Math.max(3, p.pts / max * 100)}%"></i></div><span style="color:var(--vino)">${p.pts}</span></div>`; }).join('')}</div></div>`; }
   if (P === 'final') {
-    const r = V.rank, R = V.rob || {}; const cur = r.length ? r[R.turn % r.length] : null;
-    const pod = [1, 0, 2].filter(i => r[i]).map(i => { const p = pl(V, r[i]); return `<div class="pod"><img class="o" src="${A(p.orn)}" alt=""><div class="nm">${esc(p.name)}</div><div class="h3" style="color:var(--vino)">${p.pts} punto${p.pts === 1 ? '' : 's'}</div><div class="blk" style="height:${[260, 190, 140][i]}px">${i + 1}</div></div>`; }).join('');
-    return `<div class="scr" style="display:grid;grid-template-columns:1.2fr 1fr;gap:40px;padding-top:120px"><div><div class="center"><div class="banner" style="min-width:700px">¡Ganadores!</div></div><div class="podium">${pod}</div></div>
-      <div class="card" style="padding:30px 40px;align-self:start"><div class="h2" style="font-size:46px">Así escogen regalo</div><ol style="font:600 28px/1.6 Lora;margin:10px 0 0">${r.map(id => `<li style="${id === cur ? 'color:var(--vino);font-weight:700' : ''}">${esc(nm(V, id))}</li>`).join('')}</ol>
-      <div style="margin-top:20px;text-align:center"><p class="lead">Ronda de robo · vuelta ${R.lap || 1}</p><p class="h3">Turno de ${esc(nm(V, cur))}</p>${R.die ? die(R.die) + `<p class="h3" style="color:var(--vino);margin-top:14px">${esc(R.rule)}</p>` : '<p class="lead muted">Tira el dado desde tu celular</p>'}</div></div></div>`;
+    const r = V.rank, R = V.rob || {}; const cur = R.cur;
+    const pod = [1, 0, 2].filter(i => r[i]).map(i => { const p = pl(V, r[i]); return `<div class="pod"><img class="o" src="${A(p.orn)}" alt=""><div class="nm">${esc(p.name)}</div><div class="h3" style="color:var(--vino)">${p.pts} punto${p.pts === 1 ? '' : 's'}</div><div class="blk" style="height:${[220, 160, 120][i]}px">${i + 1}</div></div>`; }).join('');
+    const gifts = `<div class="gifts">${r.map((id, i) => { const g = (R.hold || {})[id]; const st = (R.steals || {})[g] || 0; const lk = st >= (R.max || 2); return `<div class="gft ${id === cur ? 'on' : ''} ${id === R.target && R.step !== 'choose' ? 'tg' : ''}"><img src="${orn(V, id)}" alt=""><span>${esc(nm(V, id))}</span><b>Regalo ${g || i + 1}</b><em>${lk ? '🔒' : '●'.repeat(st) + '○'.repeat((R.max || 2) - st)}</em></div>`; }).join('')}</div>`;
+    let main = '';
+    if (R.step === 'pick') main = `<div class="h2">Escojan su regalo en este orden</div><p class="lead">El 1.º lugar escoge primero. Luego empieza la ronda de robo.</p>`;
+    else if (R.step === 'end') main = `<div class="h1">¡Se acabaron los robos!</div><p class="lead">Cada quien se queda con el regalo que tiene. ¡Feliz Navidad!</p>`;
+    else {
+      main = `<p class="lead muted">Ronda de robo · vuelta ${R.lap} de ${R.laps}</p><div style="display:flex;align-items:center;gap:20px"><img src="${orn(V, cur)}" style="height:110px" alt=""><div class="h1" style="font-size:80px">${esc(nm(V, cur))}</div></div>`;
+      if (R.step === 'choose') main += `<p class="h3">¿Roba o se queda con su regalo?</p><p class="lead muted">Para robar hay que tirar el dado y cumplir lo que salga.</p>`;
+      if (R.step === 'target') main += `<p class="h3">Está escogiendo a quién robarle…</p>`;
+      if (R.step === 'roll') main += `<p class="h3">Quiere el regalo de <span style="color:var(--vino)">${esc(nm(V, R.target))}</span>. ¡Tira el dado!</p>`;
+      if (R.step === 'reto' || (R.step === 'done' && R.die)) main += `<div style="display:flex;gap:34px;align-items:center;margin-top:10px">${die(R.die)}<div><div class="h2" style="color:var(--vino)">${esc(R.kind)}</div>${R.step === 'reto' ? `<p class="h3" style="font-size:40px">${esc(R.reto)}</p>${R.math ? `<p class="lead">Contesta en su celular · <span data-dl="${R.math.deadline}"></span> s</p>` : `<p class="lead muted">${esc(nm(V, R.target))} decide si lo cumplió</p>`}` : ''}</div></div>`;
+      if (R.step === 'done') main += `<p class="h3" style="margin-top:14px">${esc(R.msg)}</p>`;
+    }
+    return `<div class="scr" style="display:grid;grid-template-columns:640px 1fr;gap:40px;padding-top:110px"><div><div class="center"><div class="banner" style="min-width:520px;font-size:60px">¡Ganadores!</div></div><div class="podium" style="transform:scale(.8);transform-origin:top center">${pod}</div></div>
+      <div><div class="card" style="padding:30px 44px">${main}</div>${gifts}<p class="note center" style="margin-top:8px">● robos de cada regalo · con 2 robos queda con candado 🔒</p></div></div>`;
   }
   if (P === 'play') return ({ feu: feuView, jeo: jeoView, pre: preView, bas: basView, mil: milView })[V.game](V);
   return '';
@@ -243,11 +256,12 @@ function basView(V) {
   const B = V.bas;
   if (B.step === 'ready') return `<div class="scr center" style="padding-top:200px"><div><div class="banner">Basta</div><p class="lead" style="margin-top:20px">Categorías: ${B.cats.map(esc).join(' · ')}</p></div></div>`;
   if (B.step === 'spin') return `<div class="scr center" style="padding-top:140px"><div><p class="lead muted">Ronda ${B.round + 1} de ${B.rounds}</p><div class="wheel spin"><b id="spinL">A</b></div><p class="h2" style="margin-top:24px">${esc(nm(V, B.spinner))}, ¡para la ruleta desde tu celular!</p></div></div>`;
-  if (B.step === 'write' || B.step === 'lock') return `<div class="scr" style="display:grid;grid-template-columns:600px 1fr;gap:50px;align-items:center;padding-top:130px"><div class="wheel"><b>${esc(B.letter)}</b></div><div>${B.step === 'lock' ? `<div class="h1">¡BASTA!</div><p class="h3">Lo picó ${esc(nm(V, B.bastaBy))} · se cierra en <span data-dl="${B.lockAt}"></span></p>` : `<div class="h2">Con la letra ${esc(B.letter)}…</div>`}
+  if (B.step === 'write' || B.step === 'lock') return `<div class="scr" style="display:grid;grid-template-columns:600px 1fr;gap:50px;align-items:center;padding-top:130px"><div class="wheel"><b>${esc(B.letter)}</b></div><div>${B.step === 'lock' ? `<div class="h1">¡BASTA!</div><p class="h3">${B.bastaBy ? 'Lo picó ' + esc(nm(V, B.bastaBy)) + ' · ' : ''}se cierra en <span data-dl="${B.lockAt}"></span></p>` : `<div class="h2">Con la letra ${esc(B.letter)}…</div>`}
     <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:24px">${B.cats.map(c => `<span class="pill">${esc(c)}</span>`).join('')}</div><p class="lead" style="margin-top:24px">Escribiendo: ${B.sent.length} de ${V.players.filter(p => !p.removed).length}</p></div></div>`;
   const ps = Object.keys(B.answers || {});
   return `<div class="scr" style="padding:120px 70px 180px"><div class="center" style="margin-bottom:14px"><span class="pill" style="font-size:34px">Letra ${esc(B.letter)} · ${B.step === 'review' ? 'revisando' : 'resultados'}</span></div>
-    <table class="btable"><thead><tr><th style="width:180px">Categoría</th>${ps.map(p => `<th>${esc(nm(V, p))}</th>`).join('')}</tr></thead><tbody>${B.cats.map((c, ci) => `<tr><td style="background:var(--crema2);font-weight:700">${esc(c)}</td>${ps.map(p => { const pts = B.cell[p + '|' + ci]; const x = B.invalid[p + '|' + ci]; return `<td class="${x ? 'x' : pts ? '' : 'z'}">${esc(B.answers[p][ci] || '—')}<small>${pts || 0}</small></td>`; }).join('')}</tr>`).join('')}</tbody><tfoot><tr><td>Total</td>${ps.map(p => `<td>${B.roundPts[p] || 0}</td>`).join('')}</tr></tfoot></table>
+    <table class="btable"><thead><tr><th style="width:180px">Categoría</th>${ps.map(p => `<th>${esc(nm(V, p))}</th>`).join('')}</tr></thead><tbody>${B.cats.map((c, ci) => `<tr><td style="background:var(--crema2);font-weight:700">${esc(c)}</td>${ps.map(p => { const pts = B.cell[p + '|' + ci]; const x = B.invalid[p + '|' + ci]; const nv = ((B.votes || {})[p + '|' + ci] || []).length; return `<td class="${x ? 'x' : pts ? '' : 'z'}">${esc(B.answers[p][ci] || '—')}<small>${pts || 0}${nv ? ` · ✗${nv}` : ''}</small></td>`; }).join('')}</tr>`).join('')}</tbody><tfoot><tr><td>Total</td>${ps.map(p => `<td>${B.roundPts[p] || 0}</td>`).join('')}</tr></tfoot></table>
+    ${B.step === 'review' ? `<p class="lead center" style="margin-top:14px;font-size:26px">¿Alguien hizo trampa? Voten en su celular las que no valen (con ${B.need} votos se anula) · Ya revisaron ${B.voted.length} de ${ps.length}</p>` : ''}
     ${B.step === 'scored' ? `<p class="lead center" style="margin-top:14px">${B.awarded.map(([p, a]) => `${esc(nm(V, p))} +${a}`).join(' · ')}</p>` : ''}</div>`;
 }
 function milView(V) {
@@ -285,6 +299,7 @@ function bootPhone() {
   function screenKey() {
     if (!V) return 'none'; const F = V.feu, J = V.jeo, P = V.pre, B = V.bas, M = V.mil;
     let k = tab + '|' + V.phase + '|' + (V.game || '') + '|' + editing;
+    if (V.phase === 'final' && V.rob) k += V.rob.step + V.rob.turn;
     if (V.phase === 'play') {
       if (F) k += F.step + (F.round ? F.r + F.round.mode + F.round.answerer + F.round.strikes : '');
       if (J) k += J.step + (J.clue ? J.clue.key + JSON.stringify(J.clue.answering) + J.clue.buzzOpen : '');
@@ -310,13 +325,14 @@ function bootPhone() {
   }
   // ¿El jugador tiene algo que hacer ahora?
   function needs() {
-    if (!V || !me() || V.phase !== 'play') return V && V.phase === 'final' && V.rob && V.rank[V.rob.turn % V.rank.length] === pid && !V.rob.rolled;
+    if (V && me() && V.phase === 'final' && V.rob) { const R = V.rob; return (R.cur === pid && (['choose', 'target', 'roll'].includes(R.step) || (R.step === 'reto' && !!R.math))) || (R.target === pid && R.step === 'reto' && !R.math); }
+    if (!V || !me() || V.phase !== 'play') return false;
     const F = V.feu, J = V.jeo, P = V.pre, B = V.bas, M = V.mil;
     if (F && F.round) { const R = F.round; if (R.answerer === pid) return true; if (R.mode === 'faceoff' && R.buzzOpen && F.front.includes(pid)) return true; }
     if (F && F.step === 'names') return true;
     if (J) { const t = J.teams.findIndex(x => x.members.includes(pid)); if (J.clue && J.clue.buzzOpen && !J.clue.out.includes(t)) return true; if (J.clue && J.clue.answering && J.clue.answering.t === t && (!J.clue.answering.p || J.clue.answering.p === pid)) return true; if (J.step === 'board' && J.picker === t) return true; if (J.step === 'dd' && J.picker === t) return true; if (J.fj && (J.step === 'fjw' || J.step === 'fjq')) return true; }
     if (P && P.step === 'guess' && !P.sent.includes(pid)) return true;
-    if (B && ((B.step === 'spin' && B.spinner === pid) || B.step === 'write')) return true;
+    if (B && ((B.step === 'spin' && B.spinner === pid) || B.step === 'write' || (B.step === 'review' && !B.voted.includes(pid)))) return true;
     if (M && M.cur === pid && M.step === 'q' && !M.locked) return true;
     if (M && M.votes && M.cur !== pid && !(M.voters || []).includes(pid)) return true;
     return false;
@@ -338,9 +354,25 @@ function bootPhone() {
     if (P === 'menu' || P === 'lobby') return h + wait('¡Ya estás dentro!', 'Busca tu esfera en el árbol de la tele. Cuando estén todos, empezamos.') + '<button class="b" data-act="edit">Cambiar nombre o esfera</button>';
     if (P === 'night' || P === 'intro') return h + wait('Mira la tele', P === 'intro' ? 'Están explicando las reglas de ' + esc(V.gameName) : 'Así va a estar la noche');
     if (P === 'results' || P === 'standings') return h + wait('Mira la tele', 'Así van los puntos');
-    if (P === 'final') { const cur = V.rank[V.rob.turn % V.rank.length]; return h + (cur === pid && !V.rob.rolled ? `<div class="pc"><h2>¡Te toca!</h2><p>Tira el dado para la ronda de robo.</p><button class="b pri" data-act="roll">Tirar el dado</button></div>` : wait(cur === pid ? (V.rob.rule || 'Mira la tele') : 'Turno de ' + esc(nm(V, cur)), `Escoges regalo en el lugar ${V.rank.indexOf(pid) + 1}`)); }
+    if (P === 'final') return h + pRob();
     if (P !== 'play') return h;
     return h + ({ feu: pFeu, jeo: pJeo, pre: pPre, bas: pBas, mil: pMil })[V.game]();
+  }
+  function pRob() {
+    const R = V.rob, cur = R.cur, mine = (R.hold || {})[pid];
+    if (R.step === 'pick') return wait('¡Escoge tu regalo!', `Te toca escoger en el lugar ${V.rank.indexOf(pid) + 1}. Ese es tu «Regalo ${mine}».`);
+    if (R.step === 'end') return wait('¡Se acabaron los robos!', `Te quedas con el Regalo ${mine}. ¡Feliz Navidad!`);
+    if (cur === pid) {
+      if (R.step === 'choose') return `<div class="pc"><h2>¡Te toca!</h2><p>Tienes el Regalo ${mine}. ¿Quieres robar otro?</p><p class="note">Si robas, tiras el dado y tienes que cumplir lo que salga: confesar algo, un reto, unas cuentas rápidas o traer algo. Si no cumples, no robas.</p><button class="b pri" data-robw="1">Sí, quiero robar</button><button class="b" data-robw="0">Me quedo con el mío</button></div>`;
+      if (R.step === 'target') return `<div class="pc"><h2>¿A quién le robas?</h2>${V.rank.filter(q => q !== pid).map(q => { const g = R.hold[q], st = (R.steals || {})[g] || 0, lk = st >= R.max; return `<button class="b" data-robt="${q}" ${lk ? 'disabled' : ''}>${esc(nm(V, q))} · Regalo ${g}${lk ? ' 🔒' : st ? ' · robado ' + st + ' vez' : ''}</button>`; }).join('')}<button class="b" data-robw="0">Mejor me quedo con el mío</button></div>`;
+      if (R.step === 'roll') return `<div class="pc"><h2>Vas por el regalo de ${esc(nm(V, R.target))}</h2><p>Tira el dado para ver qué tienes que hacer.</p><button class="b pri" data-act="roll">🎲 Tirar el dado</button></div>`;
+      if (R.step === 'reto' && R.math) return `<div class="pc keep"><h2>${esc(R.kind)}</h2><p class="big">¿Cuánto es ${esc(R.math.q)}?</p><p class="say">Te quedan <span data-dl="${R.math.deadline}"></span> s</p><input class="in" id="rmath" type="number" inputmode="numeric" autocomplete="off"><button class="b pri" data-act="robmath">Mandar</button></div>`;
+      if (R.step === 'reto') return wait(esc(R.kind), esc(R.reto) + '<br><br>' + esc(nm(V, R.target)) + ' decide si lo cumpliste.');
+      return wait('Mira la tele', esc(R.msg || ''));
+    }
+    if (R.target === pid && R.step === 'reto' && !R.math) return `<div class="pc"><h2>${esc(nm(V, cur))} quiere tu regalo</h2><p class="big">${esc(R.reto)}</p><p>Tú decides: ¿lo cumplió?</p><div class="row"><button class="b ok" data-robj="1">✅ Sí, que se lo lleve</button><button class="b" data-robj="0">❌ No cumplió</button></div></div>`;
+    if (R.target === pid && R.step === 'roll') return wait(esc(nm(V, cur)) + ' va por tu regalo', 'Está tirando el dado…');
+    return wait('Turno de ' + esc(nm(V, cur)), R.step === 'reto' ? esc(R.reto) : R.step === 'done' ? esc(R.msg) : `Tú tienes el Regalo ${mine}`);
   }
   const answerBox = (lab, act, jeo) => `<div class="pc keep"><h2>${lab}</h2><input class="in" id="ans" maxlength="60" autocomplete="off" autocapitalize="sentences" placeholder="${jeo ? '¿Qué es…? / ¿Quién es…?' : 'Escribe tu respuesta'}"><button class="b pri" data-act="${act}">Mandar respuesta</button><p class="note">${jeo ? 'Si contestas en forma de pregunta («¿Quién es Freud?») ganan bonus. Los errores de dedo no importan.' : 'No importa si tiene errores de dedo: el juego la entiende.'}</p></div>`;
   function pFeu() {
@@ -388,6 +420,12 @@ function bootPhone() {
         ${B.step === 'write' ? `<button class="b pri" data-act="basta" ${full ? '' : 'disabled'}>¡BASTA!</button><p class="note">${full ? '¡Ya puedes picar Basta!' : 'Llena todas para poder picar Basta.'}</p>` : ''}</div>`;
     }
     const pts = B.roundPts ? (B.roundPts[pid] || 0) : 0;
+    if (B.step === 'review' && B.answers) {
+      const others = Object.keys(B.answers).filter(p => p !== pid); const done = B.voted.includes(pid);
+      return `<div class="pc"><h2>¿Alguien hizo trampa?</h2><p class="note">Toca las respuestas que NO valen (inventadas, que no existen o que no son de esa categoría). Con ${B.need} votos se anulan. Llevas ${pts} puntos.</p>
+        ${B.cats.map((c, ci) => { const items = others.filter(p => (B.answers[p][ci] || '').trim()); if (!items.length) return ''; return `<p class="big" style="margin:14px 0 4px">${esc(c)}</p>${items.map(p => { const k = p + '|' + ci; const vs = (B.votes || {})[k] || []; const mineV = vs.includes(pid); const x = (B.invalid || {})[k]; return `<button class="b ${mineV ? 'open' : ''}" style="font-size:15px;text-align:left;min-height:44px;margin:4px 0" data-bvote="${k}">${mineV ? '✗ ' : ''}${esc(B.answers[p][ci])} <span class="note">· ${esc(nm(V, p))}${vs.length ? ' · ✗' + vs.length : ''}${x ? ' · anulada' : ''}</span></button>`; }).join('')}`; }).join('')}
+        <button class="b ${done ? '' : 'pri'}" data-act="bdone" style="margin-top:14px">${done ? '✓ Ya revisé (puedes seguir cambiando)' : 'Ya revisé'}</button></div>`;
+    }
     return wait('Hiciste ' + pts + ' puntos', 'Mira la tabla en la tele');
   }
   function pMil() {
@@ -407,6 +445,7 @@ function bootPhone() {
   };
   function nextLabel() {
     if (V.phase === 'standings' && V.gi + 1 >= V.games.length) return 'Ir al final';
+    if (V.phase === 'final' && V.rob) return { pick: 'Empezar los robos', end: null, done: 'Siguiente turno' }[V.rob.step] !== undefined ? { pick: 'Empezar los robos', end: null, done: 'Siguiente turno' }[V.rob.step] : 'Saltar este turno';
     if (V.phase !== 'play') return NEXT[V.phase] || 'Siguiente';
     const F = V.feu, J = V.jeo, P = V.pre, B = V.bas, M = V.mil;
     if (F) { if (F.step === 'draw') return 'Así quedan, siguiente'; if (F.step === 'names') return 'Empezar las preguntas'; const R = F.round; if (R && R.mode !== 'done') return null; if (R && !F.round.tiles.every(t => t.o)) return 'Ver todas las respuestas'; return F.left > 0 ? 'Siguiente pregunta' : 'Terminar el juego'; }
@@ -434,6 +473,16 @@ function bootPhone() {
     const P = V.phase;
     if (P === 'menu') return `<div class="pc"><h2>Hola, host</h2><p>Abre la sala para que entren los jugadores. Tú también puedes jugar: ve a la pestaña «Jugar» y escoge tu esfera.</p></div>`;
     if (P === 'lobby') return `<div class="pc"><h2>${V.players.filter(p => !p.removed).length} jugadores dentro</h2><p>${V.players.filter(p => !p.removed).map(p => esc(p.name)).join(', ') || 'Todavía nadie'}</p><p class="note">Cuando estén todos, toca «Ya estamos todos».</p></div>`;
+    if (P === 'final' && V.rob) {
+      const R = V.rob; if (R.step === 'pick' || R.step === 'end') return `<div class="pc"><h2>${R.step === 'pick' ? 'Que escojan regalo en orden' : 'Se acabaron los robos'}</h2><p>${V.rank.map((id, i) => `${i + 1}. ${esc(nm(V, id))}`).join('<br>')}</p></div>`;
+      let h = `<div class="pc"><h2>Robo · turno de ${esc(nm(V, R.cur))}</h2><p class="note">Vuelta ${R.lap} de ${R.laps}. Todo se hace desde el celular de cada quien; aquí puedes ayudar si alguien se traba.</p>`;
+      if (R.step === 'choose') h += `<div class="row"><button class="b" data-hrobw="1">Va a robar</button><button class="b" data-hrobw="0">Se queda</button></div>`;
+      if (R.step === 'target') h += `<p>¿A quién le roba?</p><div class="row" style="--c:2">${V.rank.filter(q => q !== R.cur).map(q => { const lk = ((R.steals || {})[R.hold[q]] || 0) >= R.max; return `<button class="b" data-hrobt="${q}" ${lk ? 'disabled' : ''}>${esc(nm(V, q))}${lk ? ' 🔒' : ''}</button>`; }).join('')}</div>`;
+      if (R.step === 'roll') h += `<button class="b" data-cmd="roll">🎲 Tirar el dado por ${esc(nm(V, R.cur))}</button>`;
+      if (R.step === 'reto') h += `<p class="big">${esc(R.kind)}</p><p>${esc(R.reto)}</p><div class="row"><button class="b ok" data-hrobj="1">✅ Cumplió: roba</button><button class="b" data-hrobj="0">❌ No cumplió</button></div>`;
+      if (R.step === 'done') h += `<p class="big">${esc(R.msg)}</p><p class="note">Pasa solo al siguiente turno en unos segundos.</p>`;
+      return h + '</div>';
+    }
     if (P !== 'play') return '';
     const F = V.feu, J = V.jeo, Pr = V.pre, B = V.bas, M = V.mil;
     if (F) {
@@ -471,7 +520,7 @@ function bootPhone() {
       let h = `<div class="pc"><h2>Basta · ronda ${B.round + 1} de ${B.rounds}${B.letter ? ' · letra ' + esc(B.letter) : ''}</h2>`;
       if (B.step === 'spin') h += `<p>La detiene ${esc(nm(V, B.spinner))} desde su celular.</p>`;
       if (B.step === 'write') h += `<p>Escribiendo: ${B.sent.length} de ${V.players.filter(p => !p.removed).length}</p>`;
-      if (B.step === 'review') h += `<p class="note">Anula las respuestas que no valgan (inventadas o de otra categoría). Toca para anular o regresar.</p>${Object.keys(B.answers).map(p => `<p class="big" style="margin-top:12px">${esc(nm(V, p))} · ${B.roundPts[p] || 0}</p><div class="tiles">${B.cats.map((c, ci) => `<button class="b ${B.invalid[p + '|' + ci] ? 'open' : ''}" style="font-size:14px;text-align:left" data-btog="${p}" data-c="${ci}">${esc(c)}: ${esc(B.answers[p][ci] || '—')} (${B.cell[p + '|' + ci] || 0})</button>`).join('')}</div>`).join('')}`;
+      if (B.step === 'review') h += `<p class="note">Los jugadores votan desde su celular las que no valen (con ${B.need} votos se anula; ya revisaron ${B.voted.length}). Si hace falta, toca una respuesta para anularla o darla por buena tú.</p>${Object.keys(B.answers).map(p => `<p class="big" style="margin-top:12px">${esc(nm(V, p))} · ${B.roundPts[p] || 0}</p><div class="tiles">${B.cats.map((c, ci) => `<button class="b ${B.invalid[p + '|' + ci] ? 'open' : ''}" style="font-size:14px;text-align:left" data-btog="${p}" data-c="${ci}">${esc(c)}: ${esc(B.answers[p][ci] || '—')} (${B.cell[p + '|' + ci] || 0})</button>`).join('')}</div>`).join('')}`;
       return h + '</div>';
     }
     if (M) {
@@ -487,7 +536,7 @@ function bootPhone() {
     const st = V.settings; const G = { feu: '100 Mexicanos', jeo: 'Jeopardy', pre: 'Atínale', bas: 'Basta', mil: 'Millonario' };
     const seg = (k, opts, lab) => `<p class="big" style="margin-top:12px">${lab}</p><div class="row" style="--c:${opts.length}">${opts.map(([v, t]) => `<button class="b ${String(st[k]) === String(v) ? 'pri' : ''}" data-set="${k}" data-v="${v}">${t}</button>`).join('')}</div>`;
     return `<p class="big">Juegos de esta noche</p><div class="row" style="--c:2">${Object.keys(G).map(g => `<button class="b ${st.games.includes(g) ? 'pri' : ''}" data-game="${g}">${G[g]}</button>`).join('')}</div>
-      ${seg('feuPasses', [[2, '2'], [3, '3'], [4, '4']], '100 Mexicanos: veces al frente por persona')}${seg('jeoRounds', [[1, '1 tablero'], [2, '2 tableros']], 'Jeopardy')}${seg('bastaRounds', [[2, '2'], [3, '3'], [4, '4']], 'Basta: rondas')}${seg('finalists', [[2, '2'], [3, '3']], 'Millonario: finalistas')}${seg('sound', [[true, 'Sonido'], [false, 'Sin sonido']], 'Sonido en la tele')}
+      ${seg('feuPasses', [[2, '2'], [3, '3'], [4, '4']], '100 Mexicanos: veces al frente por persona')}${seg('jeoRounds', [[1, '1 tablero'], [2, '2 tableros']], 'Jeopardy')}${seg('bastaRounds', [[2, '2'], [3, '3'], [4, '4']], 'Basta: rondas')}${seg('finalists', [[2, '2'], [3, '3']], 'Millonario: finalistas')}${seg('robLaps', [[1, '1 vuelta'], [2, '2 vueltas']], 'Ronda de robo')}${seg('sound', [[true, 'Sonido'], [false, 'Sin sonido']], 'Sonido en la tele')}
       <p class="big" style="margin-top:12px">Saltar a un juego</p><div class="row" style="--c:2">${st.games.map(g => `<button class="b" data-goto="${g}">${G[g]}</button>`).join('')}</div><p class="note">Saltar reinicia ese juego desde sus reglas.</p>`;
   }
 
@@ -514,6 +563,15 @@ function bootPhone() {
     if (d.act === 'mfinal') { send({ t: 'mfinal' }); return; }
     if (d.act === 'mquit') { send({ t: 'mquit' }); return; }
     if (d.act === 'roll') { send({ t: 'roll' }); return; }
+    if (d.robw !== undefined) { send({ t: 'robWant', v: d.robw === '1' }); return; }
+    if (d.robt) { send({ t: 'robTarget', q: d.robt }); return; }
+    if (d.robj !== undefined) { send({ t: 'robJudge', v: d.robj === '1' }); return; }
+    if (d.act === 'robmath') { const v = val('rmath'); if (!v) return toast('Escribe el resultado'); send({ t: 'robMath', v }); return; }
+    if (d.bvote) { send({ t: 'bvote', k: d.bvote }); return; }
+    if (d.act === 'bdone') { send({ t: 'bdone' }); toast('¡Gracias!'); return; }
+    if (d.hrobw !== undefined) { cmd('robWant', { v: d.hrobw === '1' }); return; }
+    if (d.hrobt) { cmd('robTarget', { q: d.hrobt }); return; }
+    if (d.hrobj !== undefined) { cmd('robJudge', { v: d.hrobj === '1' }); return; }
     if (d.pick) { send({ t: 'pick', key: d.pick }); return; }
     if (d.mk !== undefined) { send({ t: 'mpick', k: +d.mk }); return; }
     if (d.life) { send({ t: 'mlife', k: d.life }); return; }
