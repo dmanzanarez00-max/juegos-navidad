@@ -1,0 +1,238 @@
+:root{--vino:#8E2A2C;--vino2:#6E1E21;--crema:#F6E8CF;--crema2:#EBD6B0;--verde:#56703F;--azul:#4F6E8E;--oro:#C99A3E;--oro2:#E3BE6A;--tinta:#4A2422;--rosa:#E8B7B2;--ok:#3F7A4A}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%}
+body{font-family:Lora,Georgia,serif;color:var(--tinta);background:#e9b9b4 url(assets/fondo-rosa.webp) 0 0/512px;overflow-x:hidden}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+input,select,textarea{font:inherit}
+.disp{font-family:"Playfair Display",Lora,serif}
+img{user-select:none;-webkit-user-drag:none}
+
+/* ============ PANTALLA GRANDE ============ */
+#tvwrap{position:fixed;inset:0;overflow:hidden;background:#d9a29d url(assets/fondo-rosa.webp) 0 0/512px}
+#tv{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden}
+.garl{position:absolute;left:-60px;right:-60px;top:-10px;height:110px;background:url(assets/guirnalda.webp) center/auto 110px repeat-x;z-index:2;pointer-events:none}
+.scr{position:absolute;inset:0;padding:120px 90px 170px}
+.center{display:grid;place-items:center;text-align:center}
+.h1{font:700 italic 92px/1.02 "Playfair Display",Lora,serif;color:var(--vino);margin:0;text-wrap:balance}
+.h2{font:700 italic 60px/1.08 "Playfair Display",Lora,serif;color:var(--vino);margin:0;text-wrap:balance}
+.h3{font:700 40px/1.15 Lora,serif;margin:0;text-wrap:balance}
+.lead{font:500 34px/1.4 Lora,serif;margin:0}
+.muted{color:#7d5552}
+.card{background:var(--crema);border:4px solid var(--vino);border-radius:28px;box-shadow:inset 0 0 0 7px var(--crema),inset 0 0 0 9px var(--crema2),0 14px 0 rgba(110,30,33,.18)}
+.banner{position:relative;display:inline-grid;place-items:center;min-width:900px;height:200px;background:url(assets/liston-rojo.webp) center/100% 100% no-repeat;padding:0 160px 22px;color:var(--crema);font:700 italic 74px/1 "Playfair Display",Lora,serif;text-shadow:0 3px 0 var(--vino2);white-space:nowrap}
+.pill{display:inline-block;background:var(--vino);color:var(--crema);border-radius:999px;padding:8px 26px;font:600 28px Lora}
+.corner{position:absolute;right:30px;bottom:18px;font:600 20px Lora;color:#7d5552;z-index:5}
+
+/* menú */
+.menu{position:absolute;inset:0;display:grid;grid-template-columns:1fr 760px 1fr;align-items:center;padding:110px 70px 60px}
+.menu .tree{height:900px;justify-self:center;filter:drop-shadow(0 20px 18px rgba(74,36,34,.25))}
+.menubtns{display:grid;gap:26px;justify-items:center}
+.mbtn{width:560px;height:132px;border:0;background:url(assets/marco-horizontal.webp) center/100% 100% no-repeat;font:700 italic 50px "Playfair Display",Lora,serif;color:var(--vino);transition:transform .15s}
+.mbtn:hover,.mbtn:focus-visible{transform:scale(1.05);outline:0}
+.mbtn.main{width:640px;height:160px;font-size:62px}
+.hostqr{justify-self:center;text-align:center;width:420px}
+.qrbox{background:var(--crema);padding:22px;border-radius:22px;border:4px solid var(--vino);display:inline-block}
+.qrbox canvas,.qrbox img{display:block;width:100%!important;height:auto!important}
+.qrfallback{font:600 22px Lora;word-break:break-all;max-width:360px}
+
+/* sala de espera */
+.lobby{position:absolute;inset:0;display:grid;grid-template-columns:560px 1fr 520px;gap:30px;align-items:center;padding:120px 80px 80px}
+.steps{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:18px;text-align:left}
+.steps li{display:grid;grid-template-columns:64px 1fr;gap:18px;align-items:center;font:500 28px/1.3 Lora}
+.steps b{display:grid;place-items:center;width:64px;height:64px;background:url(assets/medalla-estrella-roja.webp) center/contain no-repeat;color:transparent}
+.treebox{position:relative;height:820px;justify-self:center;aspect-ratio:.78}
+.treebox>img.t{height:100%;width:100%;object-fit:contain}
+.hang{position:absolute;transform:translate(-50%,-50%);text-align:center;animation:hang .8s cubic-bezier(.3,1.6,.5,1)}
+.hang img{height:110px;filter:drop-shadow(0 6px 5px rgba(74,36,34,.35))}
+.hang span{display:block;background:var(--crema);border:2px solid var(--vino);border-radius:999px;font:700 22px Lora;padding:2px 14px;margin-top:-6px}
+@keyframes hang{from{transform:translate(-50%,-180%) rotate(-12deg);opacity:0}to{transform:translate(-50%,-50%);opacity:1}}
+
+/* tira de jugadores */
+.strip{position:absolute;left:0;right:0;bottom:0;height:160px;display:flex;justify-content:center;gap:10px;padding:0 60px 12px;align-items:flex-end;background:linear-gradient(transparent,rgba(246,232,207,.92) 45%);z-index:3}
+.sp{width:180px;text-align:center;transition:transform .25s}
+.sp img{height:70px;display:block;margin:0 auto 4px;filter:drop-shadow(0 4px 3px rgba(74,36,34,.28))}
+.sp .n{font:600 22px Lora;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp .s{font:700 30px/1 Lora;color:var(--vino)}
+.sp.hot{transform:translateY(-14px) scale(1.18)}.sp.hot .n{color:var(--vino)}
+.sp.dim{opacity:.35}
+.sp.team0 .n{color:var(--vino)}.sp.team1 .n{color:var(--verde)}
+
+/* 100 mexicanos */
+.ftag{position:absolute;top:200px;width:230px;height:380px;background:center/contain no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--crema);padding:70px 18px 0;text-align:center}
+.ftag span{font:600 italic 26px/1.1 Lora}.ftag b{font:700 96px/1 Lora}
+.ftag.on{filter:drop-shadow(0 0 22px #fff6a8)}
+.fq{font:700 58px/1.12 Lora;text-align:center;max-width:1200px;margin:0 auto;text-wrap:balance}
+.fsub{font:600 italic 32px Lora;color:var(--vino);text-align:center;margin-top:10px}
+.board{display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:column;grid-template-rows:repeat(var(--rows),1fr);gap:16px;width:1260px;margin:28px auto 0}
+.tile{height:84px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font:700 36px Lora}
+.tile.open{background:var(--crema);border:4px solid var(--vino);box-shadow:inset 0 0 0 5px var(--crema),inset 0 0 0 7px var(--crema2);animation:flip .5s}
+.tile.open b{font:700 38px Lora;color:var(--crema);background:var(--vino);border-radius:10px;padding:2px 16px}
+.tile.ghost{background:rgba(246,232,207,.55);border:4px dashed var(--vino);color:#7d5552}
+.tile.ghost b{color:var(--vino)}
+.tile.hid{background:var(--vino);border:4px solid var(--oro);justify-content:center}
+.tile.hid i{font-style:normal;width:58px;height:58px;border-radius:50%;background:var(--crema);color:var(--vino);display:grid;place-items:center;font:700 32px Lora}
+@keyframes flip{from{transform:rotateX(90deg)}to{transform:none}}
+.seal{width:210px;height:210px;background:url(assets/sello-crema-1.webp) center/contain no-repeat;display:grid;place-items:center;text-align:center;margin:0 auto}
+.seal span{display:block;font:600 italic 22px Lora;color:var(--vino)}.seal b{font:700 70px/1 Lora;color:var(--vino)}
+.strikes{position:absolute;right:120px;top:640px;font:700 90px Lora;color:var(--vino);letter-spacing:14px}
+.turn{position:absolute;left:0;right:0;top:600px;text-align:center}
+.turn .who{display:inline-flex;align-items:center;gap:18px;background:var(--crema);border:4px solid var(--vino);border-radius:999px;padding:10px 34px 10px 12px;font:700 36px Lora}
+.turn .who img{height:70px}
+.clock{display:inline-block;margin-left:18px;font:700 40px Lora;color:var(--vino);min-width:90px}
+.lastans{margin-top:10px;font:600 italic 30px Lora}
+
+/* equipos (sorteo) */
+.teams2{display:grid;grid-template-columns:1fr 1fr;gap:80px;width:1400px;margin:40px auto 0}
+.tcol{padding:30px;text-align:center}
+.tcol h3{font:700 italic 50px "Playfair Display",Lora,serif;color:var(--vino);margin:0 0 20px}
+.tm{display:flex;align-items:center;justify-content:center;gap:14px;font:600 36px Lora;margin:10px 0;animation:pop .5s both}
+.tm img{height:64px}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+
+/* jeopardy */
+.jb{display:grid;gap:12px;width:1700px;margin:0 auto}
+.jh{background:var(--vino);color:var(--crema);border:4px solid var(--oro);border-radius:14px;display:grid;place-items:center;text-align:center;padding:10px;font:700 26px/1.1 Lora;min-height:100px;text-wrap:balance}
+.jc{background:var(--crema);border:4px solid var(--vino);border-radius:14px;display:grid;place-items:center;font:700 52px "Playfair Display",Lora,serif;color:var(--vino);height:104px}
+.jc.used{background:rgba(246,232,207,.35);border-color:rgba(142,42,44,.3);color:transparent}
+.jteams{position:absolute;left:0;right:0;bottom:12px;display:flex;justify-content:center;gap:40px;z-index:4}
+.jt{width:250px;height:150px;background:center/contain no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--crema);padding-top:20px;transform:rotate(-90deg)}
+.jtb{display:flex;align-items:center;gap:14px;background:var(--crema);border:4px solid var(--vino);border-radius:20px;padding:10px 22px}
+.jtb .tg{width:46px;height:76px;background:center/contain no-repeat}
+.jtb .nm{font:700 26px Lora}.jtb .sc{font:700 40px/1 Lora;color:var(--vino)}
+.jtb.pick{box-shadow:0 0 0 6px var(--oro)}
+.jtb.out{opacity:.45}
+.clue{position:absolute;inset:110px 90px 200px;display:grid;place-items:center;text-align:center;padding:60px 140px;background:url(assets/marco-grande-1.webp) center/100% 100% no-repeat}
+.clue .cat{font:600 italic 34px Lora;color:var(--vino)}
+.clue .q{font:700 64px/1.18 Lora;text-wrap:balance;max-width:1300px}
+.clue .a{font:700 italic 64px "Playfair Display",Lora,serif;color:var(--verde);margin-top:24px}
+
+/* atínale */
+.pre{position:absolute;inset:110px 80px 180px;display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+.prodimg{justify-self:center;width:720px;height:720px;background:url(assets/sello-crema-2.webp) center/contain no-repeat;display:grid;place-items:center}
+.prodimg img{max-width:470px;max-height:470px;filter:drop-shadow(0 16px 14px rgba(74,36,34,.3))}
+.where{font:600 italic 34px Lora;color:var(--vino)}
+.pricetag{display:inline-grid;place-items:center;width:330px;height:560px;background:url(assets/etiqueta-verde.webp) center/contain no-repeat;color:var(--crema);padding-top:120px;font:700 82px/1 Lora;transform:rotate(-6deg);animation:pop .5s}
+.bigclock{font:700 190px/1 "Playfair Display",Lora,serif;color:var(--vino)}
+.glist{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 30px;margin-top:20px;font:600 28px Lora;text-align:left}
+.glist div{display:flex;justify-content:space-between;gap:10px;padding:4px 14px;border-radius:10px}
+.glist .w{background:var(--vino);color:var(--crema)}
+.glist .o{text-decoration:line-through;opacity:.55}
+
+/* basta */
+.wheel{width:520px;height:520px;border-radius:50%;background:var(--crema);border:10px solid var(--vino);box-shadow:inset 0 0 0 14px var(--crema),inset 0 0 0 18px var(--oro);display:grid;place-items:center;margin:0 auto;position:relative}
+.wheel b{font:700 260px/1 "Playfair Display",Lora,serif;color:var(--vino)}
+.wheel.spin b{animation:blur .12s infinite}
+@keyframes blur{50%{opacity:.4}}
+.btable{width:1760px;margin:0 auto;border-collapse:separate;border-spacing:4px;font:600 22px Lora;table-layout:fixed}
+.btable th{background:var(--vino);color:var(--crema);padding:8px;border-radius:8px;font-size:22px}
+.btable td{background:var(--crema);padding:6px 8px;border-radius:8px;vertical-align:top;overflow:hidden}
+.btable td small{display:block;font:700 18px Lora;color:var(--vino)}
+.btable td.z{opacity:.5}.btable td.x{text-decoration:line-through;opacity:.5}
+.btable tfoot td{background:var(--vino);color:var(--crema);font-size:28px;text-align:center}
+
+/* millonario */
+.mil{position:absolute;inset:110px 80px 170px;display:grid;grid-template-columns:1fr 330px;gap:40px}
+.mq{font:700 50px/1.2 Lora;text-align:center;padding:40px 60px;text-wrap:balance}
+.mopts{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:30px}
+.mo{min-height:110px;border-radius:60px;background:var(--crema);border:4px solid var(--vino);display:flex;align-items:center;gap:18px;padding:10px 36px;font:700 36px Lora}
+.mo i{font-style:normal;color:var(--oro);font-size:40px}
+.mo.pick{background:var(--oro2)}.mo.ok{background:var(--ok);color:#fff;border-color:var(--ok)}.mo.bad{background:var(--vino);color:var(--crema)}.mo.gone{visibility:hidden}
+.ladder{display:flex;flex-direction:column-reverse;gap:12px;justify-content:center}
+.ladder div{display:flex;align-items:center;gap:14px;font:700 30px Lora;padding:8px 16px;border-radius:999px}
+.ladder img{width:54px}
+.ladder .cur{background:var(--vino);color:var(--crema)}.ladder .done{color:var(--ok)}
+.votes{display:flex;gap:20px;justify-content:center;align-items:flex-end;height:180px;margin-top:20px}
+.votes div{width:90px;background:var(--vino);border-radius:12px 12px 0 0;color:var(--crema);text-align:center;font:700 26px Lora;position:relative}
+.votes div span{position:absolute;top:-38px;left:0;right:0;color:var(--vino)}
+
+/* resultados / standings / final */
+.race{width:1500px;margin:30px auto 0;display:grid;gap:12px}
+.rrow{display:grid;grid-template-columns:70px 90px 260px 1fr 110px;align-items:center;gap:14px;font:700 34px Lora}
+.rrow img{height:70px;justify-self:center}
+.rbar{height:46px;border-radius:999px;background:var(--crema);border:3px solid var(--vino);overflow:hidden}
+.rbar i{display:block;height:100%;background:var(--vino);border-radius:999px;transition:width 1.2s cubic-bezier(.2,.9,.3,1)}
+.podium{display:flex;justify-content:center;align-items:flex-end;gap:40px;margin-top:40px}
+.pod{width:340px;text-align:center}
+.pod img.o{height:150px}
+.pod .blk{margin-top:10px;background:var(--vino);color:var(--crema);border-radius:20px 20px 0 0;font:700 80px "Playfair Display",Lora,serif;display:grid;place-items:center}
+.pod .nm{font:700 40px Lora}
+.die{width:220px;height:220px;border-radius:40px;background:#fff;border:8px solid var(--tinta);display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:34px;margin:0 auto;box-shadow:0 14px 0 #d9c7a8}
+.die i{width:70%;aspect-ratio:1;border-radius:50%;background:var(--tinta);place-self:center;visibility:hidden}.die i.v{visibility:visible}
+
+/* overlays */
+.ov{position:absolute;inset:0;z-index:20;display:grid;place-items:center;pointer-events:none}
+.ov.dark{background:rgba(74,36,34,.55)}
+.ov .card{padding:50px 80px;text-align:center;pointer-events:auto}
+.evbanner{animation:bannerIn 2.6s ease both}
+@keyframes bannerIn{0%{transform:scale(.3) rotate(-6deg);opacity:0}12%{transform:scale(1.06);opacity:1}20%{transform:none}85%{opacity:1}100%{opacity:0;transform:translateY(-40px)}}
+.bigx{font:700 520px/1 Lora;color:var(--vino);text-shadow:0 10px 0 var(--crema);animation:xin 1.2s ease both}
+@keyframes xin{0%{transform:scale(2.4);opacity:0}20%{transform:scale(1);opacity:1}80%{opacity:1}100%{opacity:0}}
+.buzzname{display:grid;justify-items:center;gap:10px;animation:bannerIn 2.2s ease both}
+.buzzname img{height:240px}.buzzname b{font:700 italic 120px "Playfair Display",Lora,serif;color:var(--vino);background:var(--crema);border:6px solid var(--vino);border-radius:40px;padding:0 50px}
+.spark{position:absolute;width:70px;height:70px;background:url(assets/estrella-dorada-grande.webp) center/contain no-repeat;animation:spark 1.6s ease-out forwards}
+@keyframes spark{from{transform:translate(0,0) scale(.3) rotate(0);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(1) rotate(200deg);opacity:0}}
+.pause{background:rgba(74,36,34,.6);pointer-events:auto}
+.settings{position:absolute;inset:0;z-index:25;background:rgba(74,36,34,.5);display:grid;place-items:center}
+.settings .card{width:1200px;max-height:900px;overflow:auto;padding:40px 60px;text-align:left;font:500 28px Lora}
+.srow{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;padding:12px 0;border-bottom:2px dashed var(--crema2)}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{border:3px solid var(--vino);background:var(--crema);color:var(--vino);border-radius:999px;padding:6px 20px;font:700 24px Lora}
+.seg button.on{background:var(--vino);color:var(--crema)}
+
+/* ============ CELULARES (host y jugador) ============ */
+.app{max-width:520px;margin:0 auto;min-height:100vh;padding:14px 14px 120px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.top .ph{font:700 italic 22px "Playfair Display",Lora,serif;color:var(--vino)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#b77;margin-right:6px}.dot.on{background:#3a9a55}
+.pc{background:var(--crema);border:3px solid var(--vino);border-radius:20px;box-shadow:inset 0 0 0 4px var(--crema),inset 0 0 0 5px var(--crema2);padding:16px;margin-top:12px}
+.pc h2{font:700 italic 26px/1.15 "Playfair Display",Lora,serif;color:var(--vino);margin:0 0 6px}
+.pc p{margin:4px 0;font-size:17px;line-height:1.4}
+.big{font:700 22px Lora}
+.b{display:block;width:100%;min-height:58px;border-radius:16px;border:3px solid var(--vino);background:var(--crema);color:var(--vino);font:700 19px Lora;margin-top:10px;padding:8px 12px}
+.b.pri{background:var(--vino);color:var(--crema)}
+.b.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.b.gold{background:var(--oro2);border-color:var(--oro)}
+.b:disabled{opacity:.4}
+.b.ok:disabled,.b.gold:disabled{opacity:1}
+.row{display:grid;grid-template-columns:repeat(var(--c,2),minmax(0,1fr));gap:8px}
+.row .b{margin-top:8px}
+.in{width:100%;min-height:54px;border-radius:14px;border:3px solid var(--vino);background:#fffaf0;padding:10px 14px;font-size:19px;color:var(--tinta);margin-top:8px}
+textarea.in{min-height:110px}
+.ornpick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.ornpick button{border:3px solid transparent;background:var(--crema);border-radius:16px;padding:6px;aspect-ratio:1;display:grid;place-items:center}
+.ornpick button img{max-width:80%;max-height:80%}
+.ornpick button.on{border-color:var(--vino);background:var(--oro2)}
+.ornpick button:disabled{opacity:.25}
+.mecard{display:flex;align-items:center;gap:14px}
+.mecard img{height:70px}
+.mecard .nm{font:700 24px Lora}.mecard .pt{font:700 34px/1 Lora;color:var(--vino)}
+.buzz{display:block;width:100%;aspect-ratio:1;max-width:340px;margin:18px auto 6px;border:0;background:url(assets/medalla-estrella-roja.webp) center/contain no-repeat;transition:transform .08s}
+.buzz:active{transform:scale(.94)}
+.buzz:disabled{filter:grayscale(1);opacity:.4}
+.say{text-align:center;font:700 italic 30px "Playfair Display",Lora,serif;color:var(--vino)}
+.wait{text-align:center;padding:30px 10px}
+.wait img{height:110px;animation:sway 3s ease-in-out infinite}
+@keyframes sway{50%{transform:rotate(8deg)}}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr 1fr;background:var(--vino);z-index:10;padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{border:0;background:transparent;color:var(--crema);font:700 18px Lora;min-height:62px;position:relative}
+.tabs button.on{background:var(--vino2)}
+.tabs button .badge{position:absolute;top:8px;right:22%;background:var(--oro2);color:var(--tinta);border-radius:999px;font-size:12px;padding:2px 8px}
+.plist{display:grid;gap:6px;margin-top:8px}
+.prow{display:grid;grid-template-columns:40px 1fr auto;gap:8px;align-items:center;background:#fffaf0;border-radius:12px;padding:6px 8px}
+.prow img{height:36px;justify-self:center}
+.prow .ctr{display:flex;gap:4px}
+.prow .ctr button{min-width:42px;min-height:42px;border-radius:10px;border:2px solid var(--vino);background:var(--crema);font:700 18px Lora;color:var(--vino)}
+.prow.rm{opacity:.45}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.tiles .b{margin:0;min-height:52px}
+.tiles .b.open{background:var(--crema2);border-style:dashed}
+.jgrid{display:grid;gap:4px;margin-top:8px}
+.jgrid .h{font:700 11px/1.1 Lora;text-align:center;color:var(--vino);align-self:end}
+.jgrid button{min-height:46px;border-radius:10px;border:2px solid var(--vino);background:var(--crema);font:700 16px Lora;color:var(--vino)}
+.jgrid button:disabled{opacity:.2}
+.note{font-size:14px;color:#7d5552;margin-top:6px}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--vino);color:var(--crema);padding:10px 20px;border-radius:999px;font:700 16px Lora;z-index:50;max-width:92vw;text-align:center;box-shadow:0 6px 14px rgba(0,0,0,.2)}
+.ref{font-size:14px;line-height:1.5}
+.ref b{color:var(--vino)}
+details.pc summary{font:700 19px Lora;color:var(--vino);cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
