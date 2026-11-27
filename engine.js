@@ -155,7 +155,7 @@ window.makeEngine = function (D, onChange) {
     S.g = { step: 'teams', teams, round: 0, used: {}, dd: [], picker: 0, clue: null, fj: null };
   };
   const jTeamOf = p => S.g.teams.findIndex(t => t.members.includes(p));
-  function jBoardStart() { const g = S.g; const cats = D.jeopardy[g.round]; const keys = []; cats.forEach((c, ci) => [1, 2, 3, 4].forEach(v => keys.push(ci + '-' + v))); g.dd = shuffle(keys).slice(0, g.round === 0 ? 1 : 2); g.used = {}; g.step = 'board'; g.clue = null; ev('banner', 'Jeopardy · ronda ' + (g.round + 1), { sub: `Escoge ${g.teams[g.picker].name}` }); }
+  function jBoardStart() { const g = S.g; const cats = D.jeopardy[g.round]; const keys = []; cats.forEach((c, ci) => [1, 2, 3, 4].forEach(v => keys.push(ci + '-' + v))); g.dd = shuffle(keys).slice(0, g.round === 0 ? 1 : 2); g.used = {}; g.step = 'board'; g.clue = null; ev('banner', 'Jeopardy · ronda ' + (g.round + 1), { sub: g.round === 0 ? `Por sorteo empieza ${g.teams[g.picker].name}` : `Escoge ${g.teams[g.picker].name}, que va perdiendo` }); }
   function jPick(key, byP) {
     const g = S.g; if (g.step !== 'board' || g.used[key]) return;
     if (byP && jTeamOf(byP) !== g.picker) return;
@@ -213,7 +213,7 @@ window.makeEngine = function (D, onChange) {
       g.clue = null; g.step = 'board';
       const total = D.jeopardy[g.round].length * 5;
       if (Object.keys(g.used).length >= total) {
-        if (g.round + 1 < Math.min(S.settings.jeoRounds, D.jeopardy.length)) { g.round++; jBoardStart(); }
+        if (g.round + 1 < Math.min(S.settings.jeoRounds, D.jeopardy.length)) { g.round++; g.picker = g.teams.map((t, i) => i).sort((a, b) => g.teams[a].score - g.teams[b].score)[0]; jBoardStart(); }
         else { g.step = 'fjw'; g.fj = { wagers: {}, answers: {}, judged: {}, deadline: 0 }; ev('banner', 'Final Jeopardy', { sub: 'Cada equipo apuesta desde su celular' }); }
       } else ev('info', `Escoge ${g.teams[g.picker].name}`);
       return;
