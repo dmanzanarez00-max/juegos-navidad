@@ -40,10 +40,10 @@ const SND = {
 // PANTALLA GRANDE
 // =================================================================
 function bootTV() {
-  document.body.innerHTML = '<div id="tvwrap"><div id="tv"><div class="garl"></div><div id="main"></div><div id="strip"></div><div id="ovl"></div><div id="ui"></div><div class="corner" id="corner"></div></div></div>';
+  document.body.innerHTML = '<div id="tvwrap"><div id="tv"><div class="garl"></div><div id="main"></div><div id="strip"></div><div id="ovl"></div><div id="ui"></div><div class="corner" id="corner"></div><button class="rescue" data-act="rescue">⚙ Opciones</button></div></div>';
   const fit = () => { const s = Math.min(innerWidth / 1920, innerHeight / 1080); const tv = $('#tv'); tv.style.transform = `scale(${s})`; tv.style.left = (innerWidth - 1920 * s) / 2 + 'px'; tv.style.top = (innerHeight - 1080 * s) / 2 + 'px'; };
   addEventListener('resize', fit); fit();
-  let V = null, sched = null, lastEv = 0, ui = { settings: false, howto: false }, nCtl = 0, netOk = false;
+  let V = null, sched = null, lastEv = 0, ui = { settings: false, howto: false, rescue: false }, nCtl = 0, netOk = false;
   const conns = new Map();
   const eng = makeEngine(D, () => { clearTimeout(sched); sched = setTimeout(publish, 40); });
   lastEv = eng.S.evId; window.__eng = eng;
@@ -74,16 +74,29 @@ function bootTV() {
     if (a === 'next') return act('next');
     if (a === 'settings') { ui.settings = !ui.settings; return render(); }
     if (a === 'howto') { ui.howto = !ui.howto; return render(); }
+    if (a === 'rescue') { ui.rescue = !ui.rescue; return render(); }
+    if (a === 'rnext') { act('next'); return; }
     if (a === 'set') { const [k, v] = b.dataset.v.split(':'); act('settings', { [k]: isNaN(+v) ? (v === 'true' ? true : v === 'false' ? false : v) : +v }); return; }
     if (a === 'game') { const g = b.dataset.v; const gs = eng.S.settings.games; const nx = gs.includes(g) ? gs.filter(x => x !== g) : ['feu', 'jeo', 'pre', 'bas', 'mil'].filter(x => gs.includes(x) || x === g); if (nx.length) act('settings', { games: nx }); return; }
-    if (a === 'reset') { if (b.dataset.sure) { act('reset', { keepPlayers: b.dataset.v === 'keep' }); ui.settings = false; render(); } else { b.dataset.sure = 1; b.textContent = '¿Seguro? Toca otra vez'; } return; }
+    if (a === 'reset') { if (b.dataset.sure) { act('reset', { keepPlayers: b.dataset.v === 'keep' }); ui.settings = false; ui.rescue = false; render(); } else { b.dataset.sure = 1; b.textContent = '¿Seguro? Toca otra vez'; } return; }
     if (a === 'pause') return act('pause');
   });
-  addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); act('next'); } if (e.key === 'p') act('pause'); });
+  addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); act('next'); } if (e.key === 'p') act('pause'); if (e.key === 'Escape' || e.key === 'o') { ui.rescue = !ui.rescue; render(); } });
 
   function updClocks() { document.querySelectorAll('[data-dl]').forEach(el => { const s = left(+el.dataset.dl); if (el.textContent !== String(s)) { el.textContent = s; if (s > 0 && s <= 5 && V && !V.paused) SND.tick(); } }); }
   function qrs() { document.querySelectorAll('[data-qr]').forEach(el => { if (el.dataset.done === el.dataset.qr) return; el.innerHTML = ''; el.dataset.done = el.dataset.qr; if (window.QRCode) { try { new QRCode(el, { text: el.dataset.qr, width: 400, height: 400, colorDark: '#4A2422', colorLight: '#F6E8CF' }); return; } catch (e) {} } el.innerHTML = `<div class="qrfallback">${esc(el.dataset.qr)}</div>`; }); }
-  let mainHTML = '', stripHTML = '';
+  let mainHTML = '', stripHTML = '', uiHTML = '';
+  function rescueView(S) {
+    return `<div class="settings" style="z-index:30"><div class="card" style="display:grid;grid-template-columns:420px 1fr;gap:50px;align-items:start">
+      <div class="center"><div class="h2" style="font-size:40px">Recuperar el control</div><div class="qrbox" style="width:380px;margin:14px auto"><div data-qr="${esc(hostURL())}"></div></div><p class="lead" style="font-size:24px">Escanéalo con tu celular para volver a ser el host.</p></div>
+      <div><div style="display:flex;justify-content:space-between;align-items:center"><div class="h2">Opciones</div><button class="mbtn" style="width:220px;height:84px;font-size:32px" data-act="rescue">Cerrar</button></div>
+      <p class="lead">Desde aquí puedes manejar el juego aunque no tengas el celular.</p>
+      <button class="mbtn" style="width:100%;margin-top:14px" data-act="rnext">Siguiente ▶</button>
+      <button class="mbtn" style="width:100%;margin-top:14px" data-act="pause">${eng.S.paused ? 'Quitar la pausa' : 'Pausar'}</button>
+      <p class="h3" style="margin-top:26px">Reiniciar el juego (los puntos vuelven a cero)</p>
+      <div class="seg" style="margin-top:10px"><button data-act="reset" data-v="keep">Con los mismos jugadores</button><button data-act="reset" data-v="all">Borrar todo y empezar de cero</button></div>
+      <p class="lead muted" style="font-size:22px;margin-top:10px">Toca dos veces para confirmar. La sala y los QR siguen siendo los mismos.</p></div></div></div>`;
+  }
   function render() {
     if (!V) V = eng.view();
     const S = eng.S;
@@ -91,7 +104,8 @@ function bootTV() {
     if (h !== mainHTML) { $('#main').innerHTML = h; mainHTML = h; qrs(); }
     const st = stripView(V); if (st !== stripHTML) { $('#strip').innerHTML = st; stripHTML = st; }
     $('#corner').textContent = `Sala ${S.code} · ${netOk ? (nCtl ? 'host conectado' : 'esperando al host') : 'conectando…'}`;
-    $('#ui').innerHTML = (ui.settings ? settingsView(S) : '') + (ui.howto ? howtoView() : '') + (V.paused ? '<div class="ov pause"><div class="card"><div class="h1">Pausa</div><p class="lead">Ahorita seguimos</p></div></div>' : '');
+    const uh = (ui.rescue ? rescueView(S) : '') + (ui.settings ? settingsView(S) : '') + (ui.howto ? howtoView() : '') + (V.paused ? `<div class="ov pause"><div class="card"><div class="h1">Pausa</div><p class="lead">Ahorita seguimos</p>${ui.rescue ? '' : '<button class="mbtn" style="margin-top:20px" data-act="pause">Quitar la pausa</button>'}</div></div>` : '');
+    if (uh !== uiHTML) { $('#ui').innerHTML = uh; uiHTML = uh; qrs(); }
     events(V); updClocks();
   }
   function events(V) {
