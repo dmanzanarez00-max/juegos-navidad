@@ -465,6 +465,7 @@ function bootPhone() {
     h += `<details class="pc"><summary>Marcador y jugadores</summary><div class="plist">${V.players.map(p => `<div class="prow ${p.removed ? 'rm' : ''}"><img src="${A(p.orn)}" alt=""><div><b>${esc(p.name)}</b> · ${p.pts} pts</div><div class="ctr"><button data-pts="${p.id}" data-d="-1" aria-label="Quitar un punto">−</button><button data-pts="${p.id}" data-d="1" aria-label="Dar un punto">+</button><button data-rm="${p.id}" aria-label="${p.removed ? 'Regresar' : 'Sacar'} a ${esc(p.name)}">${p.removed ? '↺' : '✕'}</button></div></div>`).join('')}</div><p class="note">✕ saca a un jugador del juego; ↺ lo regresa.</p></details>`;
     h += `<details class="pc"><summary>Cuánto vale cada cosa</summary><div class="ref">${POINTS.map(p => `<p><b>${p[0]}:</b> ${p[1]}</p>`).join('')}<p><b>Millonario:</b> 1, 2, 3, 5 u 8 puntos según la pregunta; si falla después de la 2.ª se queda con 2.</p></div></details>`;
     h += `<details class="pc"><summary>Ajustes</summary>${hostSettings()}</details>`;
+    h += `<details class="pc"><summary>🔄 Reiniciar el juego</summary><p class="note">Regresa todo al menú principal y los puntos a cero. Toca dos veces para confirmar.</p><button class="b" data-reset="keep">Reiniciar con los mismos jugadores</button><button class="b" data-reset="all">Reiniciar y borrar a todos</button></details>`;
     return h;
   }
   const pbtns = (ids, attr, extra) => `<div class="row" style="--c:2">${ids.map(id => `<button class="b" ${attr}="${id}" ${extra || ''}>${esc(nm(V, id))}</button>`).join('')}</div>`;
@@ -585,6 +586,7 @@ function bootPhone() {
     if (d.feuteam) { cmd('feuTeam', { p: d.feuteam, t: +d.t }); return; }
     if (d.feubuzz) { cmd('feuBuzzFor', { p: d.feubuzz }); return; }
     if (d.feutile) { cmd('feuTile', { k: +d.feutile }); return; }
+    if (d.reset) { if (b.dataset.sure) { cmd('reset', { keepPlayers: d.reset === 'keep' }); toast('Juego reiniciado'); } else { b.dataset.sure = 1; b.textContent = '¿Seguro? Toca otra vez para reiniciar'; } return; }
     if (d.act === 'endnow') { if (b.dataset.sure) cmd('endNow'); else { b.dataset.sure = 1; b.textContent = '¿Seguro? Se reparten los puntos como van. Toca otra vez'; } return; }
     if (d.act === 'feusay') { const v = val('say'); if (v) cmd('feuSay', { text: v }); return; }
     if (d.act === 'feuadd') { cmd('feuAdd', { q: val('fq'), a: $('#fa') ? $('#fa').value : '' }); toast('Pregunta agregada'); return; }
